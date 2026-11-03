@@ -1,0 +1,101 @@
+Ausgabe auf raspberrypi2 (Venus OS) als root, 03.11.2026. Der CAN-Mitschnitt fehlt: Venus kennt den Befehl timeout nicht.
+
+--- Dienste
+com.victronenergy.hub4
+com.victronenergy.battery.ttyUSB8
+com.victronenergy.settings
+com.victronenergy.battery.socketcan_can1
+com.victronenergy.system
+com.victronenergy.fronius
+com.victronenergy.platform
+com.victronenergy.digitalinputs
+com.victronenergy.solarcharger.ttyUSB1
+com.victronenergy.solarcharger.ttyUSB2
+com.victronenergy.solarcharger.ttyUSB4
+com.victronenergy.solarcharger.ttyUSB5
+com.victronenergy.solarcharger.ttyUSB6
+com.victronenergy.solarcharger.ttyUSB7
+com.victronenergy.vebus.ttyUSB0
+com.victronenergy.modbusclient.tcp
+com.victronenergy.packageManager
+com.victronenergy.shelly
+com.victronenergy.inverter.http_34
+com.victronenergy.pvinverter.mqtt_pv_100
+com.victronenergy.grid.ve_TM974E88
+com.victronenergy.logger
+com.victronenergy.pvinverter.http_34
+com.victronenergy.adc
+
+--- Zusatzdienste
+PackageManager              dbus-modbus-client          dbus-tempsensor-relay       localsettings               simple-upnpd                vedirect-interface.ttyUSB8
+avahi-autoipd               dbus-mqtt-integrations      dbus-vebus-to-pvinverter    mk2-dbus.ttyUSB0            ssh-tunnel                  venus-access
+can-bus-bms.can1            dbus-mqtt-pv                flashmq                     mqtt-rpc                    vedirect-interface.ttyUSB1  venus-html5-logger
+dbus-acsystem               dbus-opendtu_Garage         gps-dbus.ttyUSB2            netmon                      vedirect-interface.ttyUSB2  venus-platform
+dbus-adc                    dbus-opendtu_WP             gps-dbus.ttyUSB3            nginx                       vedirect-interface.ttyUSB3  vesmart-server
+dbus-ble-sensors            dbus-parallel-bms           gps-dbus.ttyUSB5            openssh                     vedirect-interface.ttyUSB4  vrmlogger
+dbus-digitalinputs          dbus-pump                   gui                         ppp                         vedirect-interface.ttyUSB5
+dbus-fronius                dbus-shelly                 hub4control                 serial-starter              vedirect-interface.ttyUSB6
+dbus-generator              dbus-systemcalc-py          llmnrd                      service-advertiser          vedirect-interface.ttyUSB7
+
+/data:
+RpiDisplaySetup           db                        dbus-opendtu_WP_alt       log                       settingsBackup            venus
+SetupHelper               dbus-opendtu_Garage       etc                       lost+found                setupOptions              vrmfilescache
+conf                      dbus-opendtu_Garage_alt   home                      rc.local                  themes
+config.ini.mqtt-grid.bak  dbus-opendtu_WP           keys                      rcS.local                 var
+
+/data/etc:
+dbus-mqtt-grid  dbus-mqtt-pv    ssl             timestamp
+
+--- ESS (/Settings/CGwacs, ohne die leeren Zeitpläne Charge/0-4: alle Day -7, Duration 0, Soc 100, Start 0, AllowDischarge 0)
+AcExportLimit -1
+AcInputLimit -1
+AcPowerSetPoint 21.0
+AlwaysPeakShave 0
+BatteryLife/DischargedTime 1760375177
+BatteryLife/Flags 0
+BatteryLife/MinimumSocLimit 20.0
+BatteryLife/SocLimit 50.0
+BatteryLife/State 10
+BatteryUse 0
+GridMeterRequired 1
+Hub4Mode 1
+MaxChargePercentage 100.0
+MaxChargePower -1.0
+MaxDischargePercentage 100.0
+MaxDischargePower -1.0
+MaxFeedInPower -1.0
+OvervoltageFeedIn 1
+PreventFeedback 0
+PvPowerSetpointOffset 200
+RunWithoutGridMeter 0
+
+--- Systemsetup (/Settings/SystemSetup, ohne die Batterie-Listeneinträge)
+AcInput1 1
+AcInput2 0
+BatteryCurrentSense 1
+BatteryService com.victronenergy.battery/291
+BmsInstance 512
+CanBmsSense 0
+DvccControlAllMultis 0
+HasAcInLoads 1
+HasAcOutSystem 1
+HasDcSystem 0
+MaxChargeCurrent 120
+MaxChargeVoltage 52.0
+SharedTemperatureSense 1
+SharedVoltageSense 1
+SystemName ''
+TemperatureService com.victronenergy.battery/512/Dc/0/Temperature
+
+--- Dienste-Einstellungen (/Settings/Services)
+BleSensors 0
+Bluetooth 1
+Bol 1
+EthernetLinkLocal 1
+Evcc 1
+InsecureDbusOverTcp 0
+Modbus 0
+MqttLocal 1
+NodeRed 0
+SignalK 0
+Socketcand 0

@@ -1,0 +1,43 @@
+  letzte 30 s: Syncs 1500, Antworten 789, ohne Antwort 711 (hoechstens 710 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 0
+  Beginn der Antwort nach dem Sync: min 9.48 ms, Mittel 10.32 ms, max 10.51 ms | <8.0: 0 8.0-8.5: 0
+ 8.5-9.0: 4 9.0-9.5: 2025 9.5-10.0: 19495 10.0-11: 16650 >11: 0
+t=987s
+  letzte 30 s: Syncs 2418, Antworten 2084, ohne Antwort 334 (hoechstens 1042 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 0
+  Beginn der Antwort nach dem Sync: min 9.43 ms, Mittel 9.94 ms, max 10.53 ms | <8.0: 0 8.0-8.5: 0 8.5-9.0: 0 9.0-9.5: 106 9.5-10.0: 1193 10.0-11: 785 >11: 0
+  gesamt: Syncs 49374, Antworten 41012, ohne Antwort 8362 (hoechstens 5148 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 1
+  Beginn der Antwort nach dem Sync: min 0.01 ms, Mittel 9.76 ms, max 10.84 ms | <8.0: 754 8.0-8.5: 0 8.5-9.0: 4 9.0-9.5: 2131 9.5-10.0: 20688 10.0-11: 17435 >11: 0
+t=1017s
+  letzte 30 s: Syncs 1500, Antworten 1500, ohne Antwort 0 (hoechstens 0 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 0
+  Beginn der Antwort nach dem Sync: min 9.48 ms, Mittel 9.98 ms, max 10.27 ms | <8.0: 0 8.0-8.5: 0 8.5-9.0: 0 9.0-9.5: 1 9.5-10.0: 800 10.0-11: 699 >11: 0
+  gesamt: Syncs 50874, Antworten 42512, ohne Antwort 8362 (hoechstens 5148 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 1
+  Beginn der Antwort nach dem Sync: min 0.01 ms, Mittel 9.77 ms, max 10.84 ms | <8.0: 754 8.0-8.5: 0 8.5-9.0: 4 9.0-9.5: 2132 9.5-10.0: 21488 10.0-11: 18134 >11: 0
+t=1047s
+  letzte 30 s: Syncs 1500, Antworten 1500, ohne Antwort 0 (hoechstens 0 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 0
+  Beginn der Antwort nach dem Sync: min 9.24 ms, Mittel 9.97 ms, max 10.53 ms | <8.0: 0 8.0-8.5: 0 8.5-9.0: 0 9.0-9.5: 116 9.5-10.0: 646 10.0-11: 738 >11: 0
+  gesamt: Syncs 52374, Antworten 44012, ohne Antwort 8362 (hoechstens 5148 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 1
+  Beginn der Antwort nach dem Sync: min 0.01 ms, Mittel 9.77 ms, max 10.84 ms | <8.0: 754 8.0-8.5: 0 8.5-9.0: 4 9.0-9.5: 2248 9.5-10.0: 22134 10.0-11: 18872 >11: 0
+t=1077s
+  letzte 30 s: Syncs 1500, Antworten 1500, ohne Antwort 0 (hoechstens 0 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 0
+  Beginn der Antwort nach dem Sync: min 9.40 ms, Mittel 9.98 ms, max 10.29 ms | <8.0: 0 8.0-8.5: 0 8.5-9.0: 0 9.0-9.5: 1 9.5-10.0: 804 10.0-11: 695 >11: 0
+  gesamt: Syncs 53874, Antworten 45512, ohne Antwort 8362 (hoechstens 5148 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 1
+  Beginn der Antwort nach dem Sync: min 0.01 ms, Mittel 9.78 ms, max 10.84 ms | <8.0: 754 8.0-8.5: 0 8.5-9.0: 4 9.0-9.5: 2249 9.5-10.0: 22938 10.0-11: 19567 >11: 0
+t=1107s
+  letzte 30 s: Syncs 1500, Antworten 1500, ohne Antwort 0 (hoechstens 0 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 0
+  Beginn der Antwort nach dem Sync: min 9.42 ms, Mittel 9.95 ms, max 10.53 ms | <8.0: 0 8.0-8.5: 0 8.5-9.0: 0 9.0-9.5: 107 9.5-10.0: 701 10.0-11: 692 >11: 0
+  gesamt: Syncs 55374, Antworten 47012, ohne Antwort 8362 (hoechstens 5148 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 1
+  Beginn der Antwort nach dem Sync: min 0.01 ms, Mittel 9.79 ms, max 10.84 ms | <8.0: 754 8.0-8.5: 0 8.5-9.0: 4 9.0-9.5: 2356 9.5-10.0: 23639 10.0-11: 20259 >11: 0
+t=1137s
+  letzte 30 s: Syncs 1500, Antworten 1500, ohne Antwort 0 (hoechstens 0 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 0
+  Beginn der Antwort nach dem Sync: min 9.72 ms, Mittel 10.00 ms, max 10.31 ms | <8.0: 0 8.0-8.5: 0 8.5-9.0: 0 9.0-9.5: 0 9.5-10.0: 746 10.0-11: 754 >11: 0
+  gesamt: Syncs 56874, Antworten 48512, ohne Antwort 8362 (hoechstens 5148 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 1
+  Beginn der Antwort nach dem Sync: min 0.01 ms, Mittel 9.79 ms, max 10.84 ms | <8.0: 754 8.0-8.5: 0 8.5-9.0: 4 9.0-9.5: 2356 9.5-10.0: 24385 10.0-11: 21013 >11: 0
+t=1167s
+  letzte 30 s: Syncs 1500, Antworten 1480, ohne Antwort 20 (hoechstens 20 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 0
+  Beginn der Antwort nach dem Sync: min 9.42 ms, Mittel 9.82 ms, max 10.61 ms | <8.0: 0 8.0-8.5: 0 8.5-9.0: 0 9.0-9.5: 112 9.5-10.0: 1017 10.0-11: 351 >11: 0
+  gesamt: Syncs 58374, Antworten 49992, ohne Antwort 8382 (hoechstens 5148 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 1
+  Beginn der Antwort nach dem Sync: min 0.01 ms, Mittel 9.79 ms, max 10.84 ms | <8.0: 754 8.0-8.5: 0 8.5-9.0: 4 9.0-9.5: 2468 9.5-10.0: 25402 10.0-11: 21364 >11: 0
+t=1197s
+  letzte 30 s: Syncs 1500, Antworten 1500, ohne Antwort 0 (hoechstens 0 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 0
+  Beginn der Antwort nach dem Sync: min 8.95 ms, Mittel 10.11 ms, max 10.41 ms | <8.0: 0 8.0-8.5: 0 8.5-9.0: 1 9.0-9.5: 0 9.5-10.0: 407 10.0-11: 1092 >11: 0
+  gesamt: Syncs 59874, Antworten 51492, ohne Antwort 8382 (hoechstens 5148 am Stueck), zusaetzlich 0, Pruefsumme falsch 0, Nummer falsch 0, Kopf falsch 1
+  Beginn der Antwort nach dem Sync: min 0.01 ms, Mittel 9.80 ms, max 10.84 ms | <8.0: 754 8.0-8.5: 0 8.5-9.0: 5 9.0-9.5: 2468 9.5-10.0: 25809 10.0-11: 22456 >11: 0

@@ -1,0 +1,9 @@
+.pio/
+build/
+.cache/
+sdkconfig
+sdkconfig.old
+dependencies.lock
+managed_components/
+__pycache__/
+firmware/src/wifi_secrets.h

@@ -1,0 +1,26 @@
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x1 (POWERON),boot:0x8 (SPI_FAST_FLASH_BOOT)
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x10cc
+load:0x403c8700,len:0xc2c
+load:0x403cb700,len:0x30b0
+entry 0x403c88b8
+
+esp32-venus Gesamtbuild, Chip ESP32-S3, PSRAM 8388608 Bytes, Flash 16777216 Bytes
+CAN: ESP_OK
+[    49][E][HoymilesRadio_CMT.cpp:103] init(): [hoymiles] CMT2300A: Connection error!!
+CMT2300A: nicht gefunden
+WLAN: verbinde
+t=30s | CH348 an tx=294000 rx=293600 fehler=0 bloecke=0 | VE.Bus sync=nein | MT681 0 Bytes | CAN 0 | WLAN 192.168.1.173
+  USB: Geraete 1, Clients 1
+  Heap intern frei 223532 (min 217096), PSRAM frei 8367272, Stack-Reserve loop=2968 net=6388 can=2140
+t=60s | CH348 an tx=594000 rx=593600 fehler=0 bloecke=0 | VE.Bus sync=nein | MT681 0 Bytes | CAN 0 | WLAN 192.168.1.173
+  USB: Geraete 1, Clients 1
+  Heap intern frei 223484 (min 217096), PSRAM frei 8367272, Stack-Reserve loop=2968 net=6388 can=2140
+t=90s | CH348 an tx=894000 rx=893600 fehler=0 bloecke=0 | VE.Bus sync=nein | MT681 0 Bytes | CAN 0 | WLAN 192.168.1.173
+  USB: Geraete 1, Clients 1
+  Heap intern frei 223532 (min 217096), PSRAM frei 8367272, Stack-Reserve loop=2968 net=6388 can=2140
+
+[1205 Bytes]

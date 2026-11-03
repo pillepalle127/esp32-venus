@@ -1,0 +1,117 @@
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x1 (POWERON),boot:0xa (SPI_FAST_FLASH_BOOT)
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x10cc
+load:0x403c8700,len:0xc2c
+load:0x403cb700,len:0x30b0
+entry 0x403c88b8
+
+esp32-venus Gesamtbuild, Chip ESP32-S3, PSRAM 8388608 Bytes, Flash 16777216 Bytes
+TIMING-TEST: VE.Bus sendet, nur mit der Simulation verbinden
+CAN: ESP_OK
+[    78][E][HoymilesRadio_CMT.cpp:103] init(): [hoymiles] CMT2300A: Connection error!!
+CMT2300A: nicht gefunden
+E BOD: Brownout detector was triggered
+
+
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x3 (RTC_SW_SYS_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+Saved PC:0x40377481
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x10cc
+load:0x403c8700,len:0xc2c
+load:0x403cb700,len:0x30b0
+entry 0x403c88b8
+
+esp32-venus Gesamtbuild, Chip ESP32-S3, PSRAM 8388608 Bytes, Flash 16777216 Bytes
+TIMING-TEST: VE.Bus sendet, nur mit der Simulation verbinden
+CAN: ESP_OK
+[    78][E][HoymilesRadio_CMT.cpp:103] init(): [hoymiles] CMT2300A: Connection error!!
+CMT2300A: nicht gefunden
+E BOD: Brownout detector was triggered
+
+
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x3 (RTC_SW_SYS_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+Saved PC:0x40377481
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x10cc
+load:0x403c8700,len:0xc2c
+load:0x403cb700,len:0x30b0
+entry 0x403c88b8
+
+esp32-venus Gesamtbuild, Chip ESP32-S3, PSRAM 8388608 Bytes, Flash 16777216 Bytes
+TIMING-TEST: VE.Bus sendet, nur mit der Simulation verbinden
+CAN: ESP_OK
+[    78][E][HoymilesRadio_CMT.cpp:103] init(): [hoymiles] CMT2300A: Connection error!!
+CMT2300A: nicht gefunden
+E BOD: Brownout detector was triggered
+
+
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x3 (RTC_SW_SYS_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+Saved PC:0x40377481
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x10cc
+load:0x403c8700,len:0xc2c
+load:0x403cb700,len:0x30b0
+entry 0x403c88b8
+
+esp32-venus Gesamtbuild, Chip ESP32-S3, PSRAM 8388608 Bytes, Flash 16777216 Bytes
+TIMING-TEST: VE.Bus sendet, nur mit der Simulation verbinden
+CAN: ESP_OK
+[    78][E][HoymilesRadio_CMT.cpp:103] init(): [hoymiles] CMT2300A: Connection error!!
+CMT2300A: nicht gefunden
+E BOD: Brownout detector was triggered
+
+
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x3 (RTC_SW_SYS_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+Saved PC:0x40377481
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x10cc
+load:0x403c8700,len:0xc2c
+load:0x403cb700,len:0x30b0
+entry 0x403c88b8
+
+esp32-venus Gesamtbuild, Chip ESP32-S3, PSRAM 8388608 Bytes, Flash 16777216 Bytes
+TIMING-TEST: VE.Bus sendet, nur mit der Simulation verbinden
+CAN: ESP_OK
+[    78][E][HoymilesRadio_CMT.cpp:103] init(): [hoymiles] CMT2300A: Connection error!!
+CMT2300A: nicht gefunden
+WLAN: verbinde
+t=30s | CH348 an tx=296400 rx=296240 fehler=0 bloecke=0 | VE.Bus sync=ja | MT681 0 Bytes | CAN 0 | WLAN 10.245.248.246
+  CH348 fehlt je Port: 0 0 0 0 0 0 0 0, Fehler je Port: 0 0 0 0 0 0 0 0
+  USB: Geraete 1, Clients 1, VE.Bus Pruefsummenfehler 0
+  Last: 2815 UDP-Pakete, 2993 MQTT-Nachrichten, WLAN -57 dBm
+  Heap intern frei 214580 (min 211532), PSRAM frei 8366556, Stack-Reserve loop=3000 net=5168 can=2144
+  Last: VEBus 5.0 net 27.2 IDLE0 50.3 IDLE1 95.0 ch348_loop 0.9 tiT 3.5 setpoint 0.8 wifi 14.0 usb_client 3.2 (% eines Kerns)
+t=60s | CH348 an tx=596400 rx=596240 fehler=0 bloecke=0 | VE.Bus sync=ja | MT681 0 Bytes | CAN 0 | WLAN 10.245.248.246
+  CH348 fehlt je Port: 50 50 50 50 50 50 50 50, Fehler je Port: 0 0 0 0 0 0 0 0
+  USB: Geraete 1, Clients 1, VE.Bus Pruefsummenfehler 0
+  Last: 5809 UDP-Pakete, 5987 MQTT-Nachrichten, WLAN -59 dBm
+  Heap intern frei 214316 (min 211532), PSRAM frei 8366556, Stack-Reserve loop=3000 net=5168 can=2144
+  Last: VEBus 4.9 net 27.1 IDLE1 95.1 IDLE0 50.6 ch348_loop 0.9 tiT 3.5 setpoint 0.8 usb_client 3.2 wifi 13.9 (% eines Kerns)
+t=90s | CH348 an tx=896400 rx=896240 fehler=0 bloecke=0 | VE.Bus sync=ja | MT681 0 Bytes | CAN 0 | WLAN 10.245.248.246
+  CH348 fehlt je Port: 0 0 50 50 50 50 50 50, Fehler je Port: 0 0 0 0 0 0 0 0
+  USB: Geraete 1, Clients 1, VE.Bus Pruefsummenfehler 0
+  Last: 8803 UDP-Pakete, 8981 MQTT-Nachrichten, WLAN -60 dBm
+  Heap intern frei 214316 (min 211532), PSRAM frei 8366556, Stack-Reserve loop=3000 net=5168 can=2144
+  Last: VEBus 5.0 net 27.1 IDLE1 95.0 IDLE0 50.7 ch348_loop 0.9 tiT 3.5 setpoint 0.8 wifi 13.9 usb_client 3.1 (% eines Kerns)
+t=120s | CH348 an tx=1196400 rx=1196240 fehler=0 bloecke=0 | VE.Bus sync=ja | MT681 0 Bytes | CAN 0 | WLAN 10.245.248.246
+  CH348 fehlt je Port: 50 50 50 50 50 50 50 50, Fehler je Port: 0 0 0 0 0 0 0 0
+  USB: Geraete 1, Clients 1, VE.Bus Pruefsummenfehler 0
+  Last: 11797 UDP-Pakete, 11975 MQTT-Nachrichten, WLAN -52 dBm
+  Heap intern frei 214316 (min 211532), PSRAM frei 8366556, Stack-Reserve loop=3000 net=5168 can=2144
+
+[4861 Bytes]
