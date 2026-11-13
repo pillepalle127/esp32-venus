@@ -58,43 +58,69 @@ Pegel:
 
 | Funktion | Signal | GPIO | Anschluss |
 |---|---|---|---|
-| VE.Bus, UART1, 256000 Baud | RX / TX / DE | 4 / 5 / 6 | RS485-Transceiver, isoliert |
-| MT681 Netz, UART2, 9600 Baud | RX | 7 | Lesekopf, nur Empfang |
-| MT681 Wärmepumpe, RMT, 9600 Baud | RX | 21 | Lesekopf, nur Empfang |
-| JK-BMS, TWAI, 500 kbit/s | TX / RX | 15 / 16 | CAN-Transceiver für 3,3 V, isoliert |
-| Funk, ein CMT2300A für beide HMS | CS, SDIO, CLK, FCS, GPIO2, GPIO3 | 10, 11, 12, 13, 9, 8 | Modul mit Antenne |
-| Kellerlüftung, I²C | SDA / SCL | 17 / 18 | die beiden BME280 (0x76, 0x77) |
-| Kellerlüftung | Lüfter | 14 | Relais |
+| VE.Bus, UART1, 256000 Baud | RX / TX | 5 / 4 | MAX13487, über ADuM1201 und B0505S isoliert |
+| MT681 Haus, UART2, 9600 Baud | RX | 7 | Pfostenstecker MT681: GND, 3V3, Haus, WP |
+| MT681 Wärmepumpe, RMT, 9600 Baud | RX | 15 | Pfostenstecker MT681 |
+| JK-BMS, TWAI, 500 kbit/s | TX / RX | 8 / 16 | TJA1050, über ADuM1201 und B0505S isoliert |
+| Funk, ein CMT2300A für beide HMS | CS, SDIO, CLK, FCS, GPIO2, GPIO3 | 10, 11, 12, 13, 9, 14 | Modul oben am S3 angelötet, dazu 3V3 und GND, kein Stecker |
+| Kellerlüftung, I²C | SDA / SCL | 18 / 17 | die beiden BME280 (0x76, 0x77), je ein Pfostenstecker: GND, 3V3, SDA, SCL |
+| Kellerlüftung | Lüfter | 6 | Relais |
+| Reserve | Relais 2 | 3 | Relais. GPIO 3 ist beim Start noch nicht aktiv, die Ansteuerung muss das abfangen |
 | E-Paper, optional, SPI | SCK, MOSI, CS, DC, RST, BUSY | 39, 40, 41, 42, 2, 1 | Display |
-| Konsole, Flashen, UART0 | TX / RX | 43 / 44 | COM-Buchse auf dem Board |
+| JK-BMS, UART0 im Betrieb, RS485 | RX / TX | 47 / 21 | MAX13487, über ADuM1201 und B0505S isoliert, nur für die Zellspannungen |
+| Reserve | | 38, 48 | Auf GPIO 48 sitzt oft die RGB-LED des Boards |
+| Flashen, UART0 beim Start | TX / RX | 43 / 44 | COM-Buchse auf dem Board |
 | CH348, USB-Host | D− / D+ | 19 / 20 | native USB-Buchse |
-| Reserve | | 38, 47, 48 | Auf einem davon sitzt oft die RGB-LED des Boards |
-| nicht beschalten | Strapping | 0, 3, 45, 46 | |
+| nicht beschalten | Strapping | 0, 45, 46 | |
 | belegt | Octal-PSRAM | 33–37 | |
 
 | CH348 | Gerät |
 |---|---|
 | Port 0–5 | die 6 MPPT, über die vorhandenen Isolatoren |
 | Port 6 | SmartShunt, über den vorhandenen Isolator |
-| Port 7 | JK-BMS über RS485, nur für die Zellspannungen |
+| Port 7 | frei, für einen weiteren MPPT |
 
 Zum JK-BMS laufen zwei Wege mit getrennten Aufgaben:
 - **CAN steuert:** Ladegrenzen, Alarme, SoC, beide Packs zusammengefasst. Das nutzt Venus heute schon. Ohne CAN keine DVCC-Vorgaben.
 - **RS485 zeigt an:** einzelne Zellspannungen für Webseite und ioBroker. Fällt es aus, fehlt nur die Anzeige. Die Regelung hängt nicht daran.
 
-Der Netzzähler bleibt am eigenen UART, er liefert das Regelsignal fürs ESS. Der zweite MT681 läuft per RMT als Empfangs-UART, das ist noch ungetestet. Die 3 UARTs des S3 und die 8 Ports des CH348 sind damit belegt. Die beiden Zähler liegen nah beieinander, rund 2 m Leitung zum S3.
+Der Netzzähler bleibt am eigenen UART, er liefert das Regelsignal fürs ESS. Der zweite MT681 läuft per RMT als Empfangs-UART, das ist noch ungetestet. Die 3 UARTs des S3 sind damit belegt, ein Port des CH348 bleibt frei. UART0 gibt dafür im Betrieb die Konsole ab: Die Firmware legt ihn nach dem Start auf GPIO 47 und 21. Flashen über COM geht weiter, die Logs laufen über WLAN. Die beiden Zähler liegen nah beieinander, rund 2 m Leitung zum S3.
 
 Welcher MPPT an welchem Port hängt, soll keine Rolle spielen: Die Firmware erkennt jedes Gerät an seiner Seriennummer aus VE.Direct und gibt ihm die Instanz von heute, damit die Themen und die History in ioBroker gleich bleiben.
 
-Auf einem Board mit DevKitC-1-Stiftleiste liegen VE.Bus, MT681, CAN und Funk auf einer Seite, das E-Paper auf der anderen. VE.Bus (GPIO 4, 5) habe ich im Timing-Test benutzt, die übrigen Pins sind noch nicht verdrahtet.
+Auf einem Board mit DevKitC-1-Stiftleiste liegen VE.Bus, MT681, CAN, I²C, Relais und Funk auf einer Seite, E-Paper und RS485 zum JK-BMS auf der anderen. Die drei Pfostenstecker sitzen übereinander neben ihren GPIOs. Die GPIOs des Funkmoduls (9–14) liegen nebeneinander. VE.Bus (GPIO 4, 5) habe ich im Timing-Test benutzt, die übrigen Pins sind noch nicht verdrahtet.
 
-Summe 24 Pins plus USB, mit E-Paper und Kellerlüftung. Frei nutzbar sind nach meiner Zählung 27: GPIO 0–18, 21, 38–48, ohne die Strapping-Pins 0, 3, 45, 46. Das gilt für ein Modul mit Octal-PSRAM. Mit 4 × SC16IS752 kämen 8–11 Pins dazu (SPI, 4 CS, 1–4 IRQ), USB bliebe dann frei.
+Summe 24 Pins plus USB, mit E-Paper, Kellerlüftung und Relais 2. Frei nutzbar sind nach meiner Zählung 27: GPIO 0–18, 21, 38–48, ohne die Strapping-Pins 0, 3, 45, 46. Dazu kommt GPIO 3 für Relais 2: Sein Strapping wirkt nach meiner Erinnerung nur, wenn die passende eFuse gesetzt ist, und das habe ich auf dem Board nicht geprüft. Das gilt für ein Modul mit Octal-PSRAM. Mit 4 × SC16IS752 kämen 8–11 Pins dazu (SPI, 4 CS, 1–4 IRQ), USB bliebe dann frei.
 
 Ins Netz geht der S3 über sein eigenes WLAN, einen W5500 brauche ich nicht. Ein Ausfall des WLAN darf die Regelung nicht berühren, er trifft nur die Verbindung zu ioBroker.
 
 - VE.Bus braucht einen UART am S3: Alle 20 ms kommt ein Sync-Frame, und gesendet wird nur in einem engen Fenster danach.
 - Der native USB-Port ist mit dem CH348 belegt. Flashen und Logs laufen dann über UART0, Updates über WLAN.
 - Beide HMS laufen über ein CMT2300A. OpenDTU kann laut Quellen bis zu 10 Wechselrichter. Der Standort läuft seit Jahren, eine Reichweitenfrage gibt es nicht.
+
+## Trennung, Transceiver (Plan, ungetestet)
+
+Lochraster-Plan mit allen Löchern und Drähten: [docs/layout_lochraster.drawio](docs/layout_lochraster.drawio). Belegung der Stiftleisten: [docs/layout_lochraster.md](docs/layout_lochraster.md).
+
+Trennung:
+- Die BMS schalten im Minus-Zweig. Hängt der S3 ohne Trennung an zwei Stellen, überbrückt seine Masse einen offenen BMS-Schalter. Deshalb höchstens eine Verbindung ohne Trennung. Ich trenne alle drei: VE.Bus, CAN und RS485.
+- Getrennt wird an TX und RX, nicht auf CANH/CANL oder A/B.
+- GND bleibt am Bus. Ohne Masse sucht sich der Ausgleichsstrom den Weg über die Signalleitungen.
+- Jede Busseite bekommt einen eigenen B0505S-1W. Ein gemeinsamer Wandler würde die Busmassen verbinden.
+- Der ADuM1201 hängt auf der S3-Seite an 3,3 V, auf der Busseite an den 5 V des B0505S. Die 5 V der Transceiver erreichen die GPIOs dadurch nicht.
+- Der B0505S ist ungeregelt. Der MAX13487 braucht laut Datenblatt 4,75–5,25 V, der TJA1050 nach meiner Erinnerung ebenso. Die Spannung bei wenig Last messe ich. Ist sie zu hoch, hilft ein Lastwiderstand: 250 Ω sind 10 % Last.
+- Der ADuM1201AR reicht auch für CAN: rund 0,8 µs Laufzeit im schlechtesten Fall, der S3 tastet nach 1,6 µs ab. Das ist gerechnet, das BMS ist darin nicht enthalten.
+
+Transceiver:
+- Ich nehme fertige Module mit MAX13487, ADuM1201 und TJA1050.
+- **MAX13487 (VE.Bus, RS485):** Er schaltet die Richtung selbst, DE entfällt. `ve.bus-library` ist laut Doku damit am MultiPlus getestet. Der Aufdruck muss `MAX13487EESA` sein, sonst ist es ein Nachbau.
+- **ADuM1201 (CAN, RS485):** S3-Seite U1 an 3,3 V, A0 zum RX, B1 vom TX, G1 an GND. Busseite U2 an 5 V, A1 vom RXD, B0 zum TXD, G2 an die Busmasse.
+- **ADuM1201 (VE.Bus):** Er sitzt oben neben den S3-Pins, die Seiten sind getauscht: U2 an 3,3 V, A1 von GPIO 4 (TX), B0 zu GPIO 5 (RX), G2 an GND. U1 an 5 V, A0 zum TXD, B1 vom RXD, G1 an die Busmasse. So kreuzen sich die vier Drähte zum MAX13487 nicht, sie laufen unter dem Modul. Das Datenblatt nennt 5 V/3 V und 3 V/5 V als Betriebsarten. Das Foto des Händlers zeigt nicht eindeutig, ob TXD zum IC-Pin DI geht, das messe ich am Modul. Details: [docs/layout_lochraster.md](docs/layout_lochraster.md).
+- **TJA1050 (CAN):** ohne Quarz. Den braucht nur der MCP2515, und den brauche ich nicht, der S3 hat TWAI. Auf dem Bus sind nur zwei 120-Ω-Abschlüsse erlaubt, das Modul bringt einen mit.
+- **Fertige isolierte Module** wie das XY-S485: nicht an VE.Bus. Am JK-BMS möglich, wenn GND der TTL-Seite gegen GND an den Klemmen offen ist und das Modul die Baudrate schafft.
+- Vor dem Anschließen an VE.Bus messe ich A gegen B: kein 120-Ω-Abschluss.
+
+Die Bestückung an den Relais-Pins (GPIO 6 und 3) mache ich anders, sie steht nicht im Lochraster-Plan.
 
 ## DVCC
 
@@ -110,6 +136,8 @@ Bei mir steht auf allen sechs MPPT `NetworkMode` = 13 (`b0001101`: Networked, Ex
 - Ein umgesteckter MPPT hört tagsüber auf zu laden, bis der S3 ihm Vorgaben schickt. Nachts lädt er ohnehin nicht, läuft aber weiter und lässt sich lesen.
 - Beim Umschalten gilt das für alle sechs.
 - Bleiben die Vorgaben vom S3 aus, stoppen alle sechs mit Fehler #67.
+
+Am 04.11.2026 gesehen ([Mitschnitt](docs/venus_mppt_0v_2026-11-04.txt)): Ohne Netzzähler und mit `RunWithoutGridMeter` = 0 meldet der MP2 `/Hub/ChargeVoltage` 0.0. DVCC gibt den MPPT dann 0 V, und sie laden nicht. `Mode` = 3 allein half nicht, `RunWithoutGridMeter` = 1 schon. Der S3 schickt den MPPT nie 0 V.
 
 ## Software (Plan)
 
@@ -192,7 +220,7 @@ Zwei Dinge, die ich dabei gelernt habe:
 
 ## Timing-Test (03.11.2026)
 
-Ein zweiter S3 spielt den MultiPlus (`firmware/sim/`): Er sendet alle 20 ms einen Sync-Frame im Format aus der esp32ess-Doku und misst von außen, wann die Antwort beginnt, bezogen auf den Beginn des Sync-Frames. Der Prüfling ist die Gesamtfirmware (Env `s3_timing`), in der VE.Bus sendet. Verbunden über Kreuz: GPIO 4 auf 5, 5 auf 4, GND. Ohne Transceiver.
+Ein zweiter S3 spielt den MultiPlus (`firmware/sim/`): Er sendet alle 20 ms einen Sync-Frame im Format aus der esp32ess-Doku und misst von außen, wann die Antwort beginnt, bezogen auf den Beginn des Sync-Frames. Der Prüfling ist die Gesamtfirmware (Env `s3_timing`), in der VE.Bus sendet. Verbunden über Kreuz: GPIO 4 auf 5, 5 auf 4, GND, damals mit RX 4 und TX 5 am Prüfling. Ohne Transceiver.
 
 Last auf Core 0 während der Messung: CH348 mit 8 Ports im Schleifentest, WLAN mit rund 95 UDP-Paketen pro Sekunde, MQTT mit 99 Nachrichten pro Sekunde an einen Abonnenten, alle 10 s ein Schreibzugriff auf den Flash. Das Funkmodul war nicht angeschlossen.
 
@@ -234,12 +262,12 @@ Gefunden dabei:
 |---|---|---|
 | VE.Bus | RS485, RJ45-Kabel direkt vom S3 zum MultiPlus | unkritisch |
 | JK-BMS | CAN, differentiell | unkritisch |
-| CH348 | USB, 5 V und Daten | bis etwa 3 m, der CH348 kann woanders sitzen als der S3 |
+| CH348 | USB, 5 V und Daten | freifliegend am USB-Kabel, bis etwa 3 m |
 | VE.Direct | 19200 Baud über die Isolatoren | wie heute am FT4232, wenn der CH348 dort sitzt |
 | MT681 | 9600 Baud, 3,3 V | 2 m sind in Ordnung |
 | Lüfter | Relais | unkritisch |
 | BME280 | I²C | empfindlichste Leitung, nicht länger als heute am Tasmota |
-| Funk | SPI, nur wenige Zentimeter | Modul sitzt direkt am S3, der Platz des S3 ist auch der Platz des Funks |
+| Funk | SPI, direkt am S3 angelötet | der Platz des S3 ist auch der Platz des Funks |
 
 Die Längenangaben sind Erfahrungswerte, gemessen habe ich sie nicht. Der S3 gehört deshalb eher zu BME280, Zählern und dem heutigen Platz der DTUs als zum MultiPlus.
 
@@ -285,7 +313,10 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 
 - Die DVCC- und ESS-Einstellungen, die der S3 übernehmen muss.
 - Wer `mqtt_pv_100` speist. In `README.md` von pv-prognose heißt es, Venus erfasse Growatt und HMS als PV-Wechselrichter. Die Zuordnung habe ich nicht geprüft.
-- Zellspannungen beider Packs über RS485: DTUoB_WP hängt heute per RS485 an einem JK-BMS, vermutlich dem zweiten. Laut esphome-jk-bms ist je Modbus-Bus nur ein Master erlaubt, und ein BMS mit Adresse 0 ist selbst Master. Ob ein Anschluss für beide Packs reicht, klärt sich, wenn der S3 in Phase 5 die Leitung von DTUoB_WP übernimmt. Braucht jedes Pack einen eigenen, gibt UART0 im Betrieb die Konsole ab und läuft auf GPIO 38, 47, 48. Flashen über COM geht dann weiter, die Logs laufen über WLAN.
+- Zellspannungen beider Packs über RS485: DTUoB_WP hängt heute per RS485 an einem JK-BMS, vermutlich dem zweiten. Laut esphome-jk-bms ist je Modbus-Bus nur ein Master erlaubt, und ein BMS mit Adresse 0 ist selbst Master. Ob ein Anschluss für beide Packs reicht, klärt sich, wenn der S3 in Phase 5 die Leitung von DTUoB_WP übernimmt. Braucht jedes Pack einen eigenen Anschluss, fehlt ein UART. Dann kommt ein SC16IS752 auf die Pins des E-Paper, das Display entfällt dafür.
+- Baudrate am RS485 des JK-BMS.
+- GND am CAN- und RS485-Port des JK-BMS gegen B− messen, dazu VE.Bus Pin 3 gegen DC− des MP2. Ist ein Port schon getrennt, entfällt dort die Trennung.
+
 ## Quellen
 
 - [Venus OS Build-Repo](https://github.com/victronenergy/venus)
@@ -313,3 +344,12 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 - [ESPHome: USB Host](https://esphome.io/components/usb_host/)
 - [tbnobody/OpenDTU](https://github.com/tbnobody/OpenDTU)
 - [ESP32-S3 Datenblatt](https://documentation.espressif.com/esp32-s3_datasheet_en.pdf)
+- [MAX13487E Datenblatt](https://www.analog.com/media/en/technical-documentation/data-sheets/max13487e-max13488e.pdf)
+- [ADuM1200/ADuM1201 Datenblatt](https://www.mouser.com/datasheet/2/609/ADuM1200_1201-1503479.pdf)
+- [ADuM1200/ADuM1201 Datenblatt](https://www.analog.com/media/en/technical-documentation/data-sheets/adum1200_1201.pdf)
+- [MAX13487E/MAX13488E Datenblatt](https://www.analog.com/media/en/technical-documentation/data-sheets/max13487e-max13488e.pdf)
+- [2N7000 Datenblatt](https://www.onsemi.com/pdf/datasheet/nds7002a-d.pdf)
+
+## Lizenz
+
+GPL-2.0-or-later, siehe [LICENSE](LICENSE). Die fremden Bibliotheken in `firmware/lib/` stehen unter ihren eigenen Lizenzen, siehe [firmware/lib/README.md](firmware/lib/README.md).

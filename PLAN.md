@@ -80,7 +80,7 @@ Der S3 rechnet alles, schickt aber nichts an die Geräte. So habe ich es auch be
    - `DTUoB_WP/1164a012bcc6/0/yieldtotal`, `powerdc`
    - `DTUoB_WP/powermeter/*`
 
-Der Modus steht heute nach einem Neustart auf 0, darauf verlässt sich das Skript. Der S3 übernimmt von der DTU den zweiten MT681 (GPIO 21) und die RS485-Leitung zum JK-BMS (CH348 Port 7). Bis dahin kommen die Zellspannungen weiter von der DTU per MQTT. Beim Umstecken klärt sich, ob ein Anschluss für beide Packs reicht. MultiPlus und DTUoB_WP teilen sich dann die Entladegrenze des BMS. Das ist neu, weil heute keiner vom anderen weiß.
+Der Modus steht heute nach einem Neustart auf 0, darauf verlässt sich das Skript. Der S3 übernimmt von der DTU den zweiten MT681 (GPIO 15) und die RS485-Leitung zum JK-BMS (UART0 auf GPIO 38, 47, 48). Bis dahin kommen die Zellspannungen weiter von der DTU per MQTT. Beim Umstecken klärt sich, ob ein Anschluss für beide Packs reicht. MultiPlus und DTUoB_WP teilen sich dann die Entladegrenze des BMS. Das ist neu, weil heute keiner vom anderen weiß.
 
 3. **Kellerlüftung.** Die beiden BME280, der Lüfter und die Regelung aus `kellerlueftung.be` ziehen vom Tasmota um. Der S3 spricht dafür auch die Themen des Tasmota, damit die Datenpunkte unter `sonoff.0.Tasm_Kellercenter2` gleich bleiben. Danach entfällt der Tasmota.
 
@@ -105,6 +105,7 @@ Regeln:
 5. Watchdog auf allen Tasks. Vor jedem Neustart und Update schalte ich den Bus stumm (`setTxEnabled(false)`). DE und TX sind per Widerstand so vorgespannt, dass der Bus beim Hochfahren frei bleibt.
 6. Updates über WLAN mit zwei Partitionen. Besteht die neue Firmware ihre Selbstprüfung nicht, geht sie automatisch zurück.
 7. Parser und Regelung teste ich auf dem Rechner, mit echten Mitschnitten.
+8. Eine Ladespannung von 0 V geht nie an die MPPT. Venus tut das in einem bestimmten Zustand, und die MPPT laden dann nicht ([Mitschnitt](docs/venus_mppt_0v_2026-11-04.txt)).
 
 ## Webseite
 
@@ -122,8 +123,9 @@ Der S3 bekommt eine eigene Webseite, sie muss sein. Sie ersetzt auch das HDMI-Di
 - Ein CMT2300A mit Antenne für beide HMS.
 - E-Paper-Display, optional.
 - CH348 (oder 4 × SC16IS752), die vorhandenen Isolatoren für die 7 VE.Direct-Kanäle.
-- RS485-Transceiver für VE.Bus, isoliert.
-- CAN-Transceiver für 3,3 V, isoliert.
+- VE.Bus und JK-BMS (RS485): je MAX13487-Modul, ADuM1201-Modul (ADuM1201AR) und B0505S-1W. Keine DE-Leitung, der MAX13487 schaltet die Richtung selbst.
+- JK-BMS (CAN): TJA1050-Modul, ADuM1201-Modul (ADuM1201AR) und B0505S-1W.
+- Die Bestückung an den Relais-Pins (GPIO 6 und 3) mache ich anders, sie steht nicht im Lochraster-Plan.
 - Zwei Leseköpfe für die beiden MT681, rund 2 m Leitung.
 - Die beiden BME280 und das Lüfter-Relais vom Tasmota.
 
@@ -139,4 +141,3 @@ Der S3 bekommt eine eigene Webseite, sie muss sein. Sie ersetzt auch das HDMI-Di
 ## Offene Entscheidungen
 
 - Platz und Versorgung des S3.
-- Lizenz: `lib/Hoymiles` steht unter GPL-2.0-or-later, die CH348-Befehle stammen aus einem GPL-2.0-Treiber, PicoMQTT unter LGPL-3.0. Das zählt erst, wenn ich die Firmware veröffentliche.

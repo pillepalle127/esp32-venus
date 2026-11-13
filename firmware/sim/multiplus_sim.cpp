@@ -6,8 +6,9 @@
 // von aussen, wann die Antwort des Prueflings beginnt: erste Flanke auf RX,
 // bezogen auf den Beginn des Sync-Frames.
 //
-// Verbindung ueber Kreuz: GPIO 5 hier auf GPIO 4 dort, GPIO 4 hier auf GPIO 5
-// dort, dazu GND. Ausgabe ueber den nativen USB-Port.
+// Verbindung: GPIO 5 hier auf GPIO 5 dort (RX des Prueflings), GPIO 4 hier auf
+// GPIO 4 dort (TX des Prueflings), dazu GND. Der Test vom 2026-11-03 lief noch ueber
+// Kreuz, damals mit RX 4 und TX 5 am Pruefling. Ausgabe ueber den nativen USB-Port.
 
 #include <Arduino.h>
 
