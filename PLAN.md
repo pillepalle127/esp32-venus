@@ -33,6 +33,8 @@ Keine Verbindung zur Anlage.
 2. **Treiber.** Erledigt am 03.11.2026: alle 8 Ports als Schleife mit 19200 Baud ohne Fehler.
 3. **Gesamtbuild.** `ve.bus-library`, `lib/Hoymiles`, WLAN, TWAI, USB-Host und MQTT-Broker in einer Firmware (`firmware/`). Erledigt am 03.11.2026 mit Arduino 3.3.12 auf ESP-IDF 5.5.5: Sie läuft auf dem Board, der CH348-Schleifentest läuft darin fehlerfrei mit, WLAN ist verbunden. CMT2300A und Transceiver waren noch nicht angeschlossen, VE.Bus und CAN hatten also nichts zu tun.
 4. **Timing unter Last.** Ein zweiter S3 spielt den MultiPlus und sendet alle 20 ms einen Sync-Frame. Der Prüfling antwortet im Fenster von 8,0–9,5 ms, während USB, WLAN, MQTT und Funk voll laufen. Ich zähle die verpassten Fenster, auch während Schreibvorgängen im Flash, denn die halten beide Kerne kurz an. Erledigt am 03.11.2026: 9000 von 9000 Antworten, ohne Fehler, Beginn 8,95–10,53 ms nach dem Sync. Core 1 hat dabei 5 % Last, Core 0 rund 50 %, davon der größte Teil durch künstlichen Netzverkehr. Für die Last muss ich den Funk deshalb nicht anschließen.
+5. **Aufgebaute Hardware prüfen.** Jede Strecke am Tisch mit der Testfirmware, Ablauf in [docs/testplan.md](docs/testplan.md), Teil A.
+
 **Fertig, wenn** alles läuft und die Stückliste feststeht.
 
 **Hält das Timing nicht,** melde ich das mit Messwerten, und du entscheidest.
@@ -41,10 +43,13 @@ Keine Verbindung zur Anlage.
 
 Der S3 hängt an der Anlage und sendet nichts.
 
+Prüfpunkte je Schritt: [docs/testplan.md](docs/testplan.md), Teil B.
+
 - **VE.Bus:** An der zweiten VE.Bus-Buchse des MultiPlus, TX-Leitung gar nicht angeschlossen. Vor dem Stecken messe ich, dass der Bus über 100 kΩ sieht. Der Mitschnitt zeigt auch, was `mk2-dbus` heute an den MultiPlus schickt, vor allem Sollwert und Grenzen.
 - **CAN:** TWAI im Listen-only-Modus am Bus `can1`, Abgleich mit dem Mitschnitt aus Phase 0.
 - **VE.Direct:** Empfang parallel an den Isolator-Ausgängen, der FT4232 bleibt dran. So stoppt kein MPPT mit Fehler #67. Geht das elektrisch nicht, stecke ich nachts einzeln um.
-- **MT681:** Empfang parallel zum Tasmota. Geht das nicht, nehme ich die Werte in dieser Phase per MQTT vom Tasmota.- **Vergleich:** Der S3 liest die N-Themen von Venus mit und protokolliert die Abweichungen.
+- **MT681:** Empfang parallel zum Tasmota. Geht das nicht, nehme ich die Werte in dieser Phase per MQTT vom Tasmota.
+- **Vergleich:** Der S3 liest die N-Themen von Venus mit und protokolliert die Abweichungen.
 
 **Fertig, wenn** die Werte passen, keine Telegramme verloren gehen und der S3 mehrere Tage ohne Neustart läuft, bei Sonne und bei trübem Wetter.
 
@@ -80,7 +85,7 @@ Der S3 rechnet alles, schickt aber nichts an die Geräte. So habe ich es auch be
    - `DTUoB_WP/1164a012bcc6/0/yieldtotal`, `powerdc`
    - `DTUoB_WP/powermeter/*`
 
-Der Modus steht heute nach einem Neustart auf 0, darauf verlässt sich das Skript. Der S3 übernimmt von der DTU den zweiten MT681 (GPIO 15) und die RS485-Leitung zum JK-BMS (UART0 auf GPIO 38, 47, 48). Bis dahin kommen die Zellspannungen weiter von der DTU per MQTT. Beim Umstecken klärt sich, ob ein Anschluss für beide Packs reicht. MultiPlus und DTUoB_WP teilen sich dann die Entladegrenze des BMS. Das ist neu, weil heute keiner vom anderen weiß.
+Der Modus steht heute nach einem Neustart auf 0, darauf verlässt sich das Skript. Der S3 übernimmt von der DTU den zweiten MT681 (GPIO 6) und die RS485-Leitung zum JK-BMS (UART0 auf GPIO 47 und 21). Bis dahin kommen die Zellspannungen weiter von der DTU per MQTT. Beim Umstecken klärt sich, ob ein Anschluss für beide Packs reicht. MultiPlus und DTUoB_WP teilen sich dann die Entladegrenze des BMS. Das ist neu, weil heute keiner vom anderen weiß.
 
 3. **Kellerlüftung.** Die beiden BME280, der Lüfter und die Regelung aus `kellerlueftung.be` ziehen vom Tasmota um. Der S3 spricht dafür auch die Themen des Tasmota, damit die Datenpunkte unter `sonoff.0.Tasm_Kellercenter2` gleich bleiben. Danach entfällt der Tasmota.
 
@@ -125,7 +130,7 @@ Der S3 bekommt eine eigene Webseite, sie muss sein. Sie ersetzt auch das HDMI-Di
 - CH348 (oder 4 × SC16IS752), die vorhandenen Isolatoren für die 7 VE.Direct-Kanäle.
 - VE.Bus und JK-BMS (RS485): je MAX13487-Modul, ADuM1201-Modul (ADuM1201AR) und B0505S-1W. Keine DE-Leitung, der MAX13487 schaltet die Richtung selbst.
 - JK-BMS (CAN): TJA1050-Modul, ADuM1201-Modul (ADuM1201AR) und B0505S-1W.
-- Die Bestückung an den Relais-Pins (GPIO 6 und 3) mache ich anders, sie steht nicht im Lochraster-Plan.
+- Die Bestückung an den Relais-Pins (GPIO 11 und 12) mache ich anders, sie steht nicht im Lochraster-Plan.
 - Zwei Leseköpfe für die beiden MT681, rund 2 m Leitung.
 - Die beiden BME280 und das Lüfter-Relais vom Tasmota.
 
@@ -133,7 +138,7 @@ Der S3 bekommt eine eigene Webseite, sie muss sein. Sie ersetzt auch das HDMI-Di
 
 1. **VE.Bus-Timing am echten MultiPlus.** Neben USB und WLAN hält es gegen die Simulation. Ob der MultiPlus die Zeitpunkte annimmt, zeigt erst Phase 2 und 4.
 1a. **Versorgung.** Das Testboard hatte unter Last an der COM-Buchse einen Brownout. Die endgültige Versorgung muss USB, WLAN, Funk und CH348 sicher tragen.
-2. **CH348 im Betrieb.** Treiber und Schleifentest laufen. Das Protokoll ist aber nicht offen, und Abstecken behandelt der Treiber noch nicht. Die Ausweichlösung 4 × SC16IS752 bleibt im Plan.
+2. **CH348 im Betrieb.** Treiber und Schleifentest laufen. Das Protokoll ist aber nicht offen, und Abstecken behandelt der Treiber noch nicht. Nach einem Neustart des S3 meldete sich der CH348 nur wieder, wenn er selbst kurz ohne Strom war (14.11.2026). Die Ausweichlösung 4 × SC16IS752 bleibt im Plan.
 3. **Grenzen am MultiPlus.** Wie `mk2-dbus` sie über den VE.Bus schickt, ist nicht offen. Der Mitschnitt in Phase 2 soll es zeigen. Sonst begrenze ich nur über den Sollwert.
 4. **Qualität des eigenen ESS-Reglers.** Sie hängt am Takt des MT681, den ich noch nicht kenne.
 5. **Ausfall im BMS-Modus.** Ohne Vorgaben stoppen alle sechs MPPT. Das soll so sein, kostet aber PV-Ertrag, bis der S3 wieder läuft.

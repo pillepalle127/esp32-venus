@@ -13,21 +13,21 @@ Board: ESP32-S3-WROOM-1 N16R8. Pinbelegung wie in `firmware/src/pins.h`. Jede Ze
                              | RST    RX  44 |  frei
 ┌ ADuM, MAX13487  -- TX -----|  4          1 |----- BUSY --┐ E-Paper
 └ VE.Bus          -- RX -----|  5          2 |----- RST ---┤ optional
-  Lüfter          -- OUT ----|  6         42 |----- DC ----┤
-┌ Stecker MT681   -- Haus ---|  7         41 |----- CS ----┤
-└                 -- WP -----| 15         40 |----- MOSI --┤
-  CAN             -- RX -----| 16         39 |----- SCK ---┘
-┌ Stecker BME280  -- SCL ----| 17         38 |  frei
-└                 -- SDA ----| 18         37 |  belegt
-  CAN             -- TX -----|  8         36 |  belegt
-  Relais 2        -- OUT ----|  3         35 |  belegt
-                     frei    | 46          0 |  frei
-┌ CMT2300A        -- GPIO2 --|  9         45 |  frei
-│ oben am S3      -- CS -----| 10         48 |  frei
-│ angelötet       -- SDIO ---| 11         47 |----- RX ----┐ ADuM, MAX13487
-│                 -- CLK ----| 12         21 |----- TX ----┘ RS485 JK-BMS
-│                 -- FCS ----| 13         20 |  USB, frei
-└                 -- GPIO3 --| 14         19 |  USB, frei
+┌ Stecker MT681   -- WP -----|  6         42 |----- DC ----┤
+└                 -- Haus ---|  7         41 |----- CS ----┤
+┌ Stecker BME280  -- SCL ----| 15         40 |----- MOSI --┤
+└                 -- SDA ----| 16         39 |----- SCK ---┘
+                     frei    | 17         38 |  frei
+┌ CMT2300A        -- GPIO2 --| 18         37 |  belegt
+│ oben am S3      -- CS -----|  8         36 |  belegt
+│ angelötet       -- SDIO ---|  3         35 |  belegt
+│                 -- CLK ----| 46          0 |  frei
+│                 -- FCS ----|  9         45 |  frei
+└                 -- GPIO3 --| 10         48 |  RGB-LED des Boards
+  Lüfter          -- OUT ----| 11         47 |----- RX ----┐ ADuM, MAX13487
+  Relais 2        -- OUT ----| 12         21 |----- TX ----┘ RS485 JK-BMS
+┌ ADuM, TJA1050   -- RX -----| 13         20 |  USB, frei
+└ CAN             -- TX -----| 14         19 |  USB, frei
   5 V Einspeisung -----------| 5V        GND |--------------- GND-Schiene
   GND-Schiene, CMT2300A -----| GND       GND |--------------- GND-Schiene
                              +---------------+
@@ -35,7 +35,11 @@ Board: ESP32-S3-WROOM-1 N16R8. Pinbelegung wie in `firmware/src/pins.h`. Jede Ze
                        nativ: CH348    COM: Flashen
 ```
 
-Der CH348 hängt am USB-Kabel. Der CMT2300A ist oben am S3 angelötet, an GPIO 9–14, am zweiten 3V3-Pin und am untersten GND-Pin. Auf der Platine hat er keinen Draht.
+Der CH348 hängt am USB-Kabel. Der CMT2300A ist oben am S3 angelötet, an den sechs Pins von GPIO 18 bis GPIO 10, am zweiten 3V3-Pin und am untersten GND-Pin. Auf der Platine hat er keinen Draht.
+
+GPIO 3 und 46 sind Strapping-Pins. GPIO 46 muss beim Reset low sein, sonst kommt der S3 nicht in den Download-Modus. Der interne Pull-down hält ihn low, und CLK ist am CMT2300A ein Eingang. GPIO 3 trägt SDIO, das treibt beim Start niemand.
+
+Bei den Pfostensteckern kreuzen sich zwei Drähte zweimal ohne Verbindung: SCL läuft von GPIO 15 neben dem S3 nach unten zu den C-Pins, SDA von GPIO 16 kreuzt es auf dem Weg zu den D-Pins. SDA auf 16 und SCL auf 15 ist so verdrahtet und am 14.11.2026 mit einem BME280 getestet. Beim MT681-Stecker kreuzen sich die beiden Zählerdrähte einmal ohne Verbindung: Haus liegt auf GPIO 7, WP auf GPIO 6, so ist es verdrahtet. Ebenso kreuzen sich die CAN-Drähte einmal: RX liegt auf GPIO 13, TX auf GPIO 14, so ist es verdrahtet.
 
 Drei Pfostenstecker 1 x 4 sitzen übereinander neben den GPIOs:
 
@@ -65,6 +69,21 @@ Der ADuM1201 für VE.Bus sitzt oben neben den S3-Pins, oberhalb der Pfostensteck
 
 Das setzt voraus, dass TXD zum IC-Pin 4 (DI) geht und RXD zum Pin 1 (RO). Ist es umgekehrt, tausche ich die beiden Drähte an TXD und RXD.
 
+Beim ADuM1201 läuft Kanal A von Seite 2 nach Seite 1, Kanal B umgekehrt (Datenblatt, Tabelle 16). Auf dem Modul heißt die Ziffer 1 Eingang und 0 Ausgang:
+
+| Modul | IC-Pin | Datenblatt | Richtung |
+|---|---|---|---|
+| U1 | 1 | VDD1 | Versorgung Seite 1 |
+| A0 | 2 | VOA | Ausgang Seite 1 |
+| B1 | 3 | VIB | Eingang Seite 1 |
+| G1 | 4 | GND1 | Masse Seite 1 |
+| G2 | 5 | GND2 | Masse Seite 2 |
+| B0 | 6 | VOB | Ausgang Seite 2 |
+| A1 | 7 | VIA | Eingang Seite 2 |
+| U2 | 8 | VDD2 | Versorgung Seite 2 |
+
+TX vom S3 geht deshalb immer auf A1 oder B1, RX zum S3 kommt immer von A0 oder B0. Der ADuM für VE.Bus hat Seite 2 am S3, die für CAN und RS485 haben Seite 1 am S3. Beides funktioniert, solange alle vier Pins einer Seite auf derselben Seite der Trennung hängen. Die Netzliste aus dem Plan habe ich am 14.11.2026 für alle drei Module so geprüft. Die Beschriftung habe ich nur am Foto des Händlers mit dem Datenblatt verglichen.
+
 Der B0505S steht unten neben dem Modul: +Vo an VCC, 0V am GND-Draht, Vin und GND kommen von rechts.
 
-Die Bestückung an GPIO 6 und GPIO 3 steht nicht im Plan, die mache ich anders. GPIO 3 ist beim Start noch nicht aktiv, die Ansteuerung muss das abfangen.
+Die Bestückung an GPIO 11 und GPIO 12 steht nicht im Plan, die mache ich anders.
