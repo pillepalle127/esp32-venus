@@ -1,6 +1,6 @@
 # Testplan
 
-Ich prüfe jede Strecke einzeln, bevor der S3 an die Anlage kommt. Werkzeug ist die Testfirmware mit Webseite ([README](../README.md#testfirmware-mit-webseite-14112026)): `http://<IP>/` oder `http://esp32-venus.local/`.
+Ich prüfe jede Strecke einzeln, bevor der S3 an die Anlage kommt. Werkzeug ist die Testfirmware mit Webseite ([Tests und Messungen](tests.md#testfirmware-mit-webseite-14112026)): `http://<IP>/` oder `http://esp32-venus.local/`.
 
 - **Teil A** läuft am Tisch, ohne Anlage. Nichts davon berührt VE.Bus, BMS oder Regelung.
 - **Teil B** ist Phase 2 aus [PLAN.md](../PLAN.md): Der S3 hört an der Anlage mit und sendet nichts. Jeden Schritt in Teil B spreche ich vorher einzeln ab.
