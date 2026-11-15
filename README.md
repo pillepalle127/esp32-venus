@@ -162,7 +162,7 @@ ioBroker soll nichts merken: gleiche Adresse 192.168.1.10:1883, Benutzer `remote
 - Lesen: 38 N-Themen, die Bereiche stehen in `~/projects/Kellerlüftung/mqtt1_abo.txt`.
 - Schreiben: `AcPowerSetPoint`, `vebus.288.Mode`, `BatteryLife/State`.
 - Dazu die Werte, die heute der Tasmota an ioBroker schickt (`MT681_Power_cur`, `MT681_Total_in`, `VIC`).
-- `mqtt_pv_100` bekommt seine Werte heute per MQTT. Das muss weiter ankommen.
+- `mqtt_pv_100` ist der Growatt MIC. Venus bindet ihn mit [venus-os_dbus-mqtt-pv](https://github.com/mr-manuel/venus-os_dbus-mqtt-pv) ein: höchstens 1600 W, AC-Eingang 1, Topic `Growatt_fake/power` am Broker 192.168.1.4. Kommt 60 s nichts, beendet sich der Treiber. Das Topic schreibt das ioBroker-Skript `script.js.common.Photovoltaik` (Adapter `javascript.0`), mit `power`, `current` und `energy_forward`. Das muss weiter ankommen.
 
 ## VE.Bus laut Quellen (nicht von mir gemessen)
 
@@ -239,7 +239,6 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 ## Offen
 
 - Die DVCC- und ESS-Einstellungen, die der S3 übernehmen muss.
-- `mqtt_pv_100` ist der Growatt MIC, laut Config (15.11.2026) eingebunden mit [venus-os_dbus-mqtt-pv](https://github.com/mr-manuel/venus-os_dbus-mqtt-pv): höchstens 1600 W, AC-Eingang 1, Topic `Growatt_fake/power` am Broker 192.168.1.4. Kommt 60 s nichts, beendet sich der Treiber. Das Topic schreibt das ioBroker-Skript `script.js.common.Photovoltaik` (Adapter `javascript.0`), mit `power`, `current` und `energy_forward`. Woher das Skript die Werte des Growatt hat, ist offen.
 - Einzelzellen: DTUoB_WP (192.168.1.30, `OpenDTU-WP-0DB714`) liest per RS485 nur ein Pack, laut ioBroker am 14.11.2026 Adresse 1, 15 Zellen, 220 Ah. CAN meldet 440 Ah und 2 Module. Deshalb bekommt jedes Pack einen eigenen RS485 am SC16IS752. Laut esphome-jk-bms ist je Modbus-Bus nur ein Master erlaubt, und ein BMS mit Adresse 0 ist selbst Master.
 - Baudrate am RS485 des JK-BMS.
 - GND am CAN- und RS485-Port des JK-BMS gegen B− messen, dazu VE.Bus Pin 3 gegen DC− des MP2. Ist ein Port schon getrennt, entfällt dort die Trennung.

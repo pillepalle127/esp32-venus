@@ -19,7 +19,7 @@ Keine Hardware. Ich will wissen, was der Pi wirklich alles tut.
 - CAN-Mitschnitt von `can1`: Welche Telegramme sendet das JK-BMS, woher kommen die Zellspannungen?
 - Die genaue Liste der 38 N-Themen und 3 W-Themen, die ioBroker nutzt.
 - Wer den MQTT-Keepalive an Venus schickt. Ein leerer Keepalive löst eine volle Neuveröffentlichung aus, das muss der S3 genauso können.
-- Woher das ioBroker-Skript `script.js.common.Photovoltaik` die Werte des Growatt MIC hat. Es schreibt `Growatt_fake/power`, daraus macht Venus `mqtt_pv_100`. Dazu: wie `dbus-opendtu` an die HMS-Werte kommt.
+- Wie `dbus-opendtu` an die HMS-Werte kommt.
 - Geklärt (Config, 15.11.2026): DTUoB_WP liest den Zählerwert per SML vom MT681 WP (RX-Pin 18) und das JK-BMS seriell alle 2 s.
 - Versorgung des Pi heute.
 

@@ -6,6 +6,23 @@ Ich prüfe jede Strecke einzeln, bevor der S3 an die Anlage kommt. Werkzeug ist 
 - **Teil B** ist Phase 2 aus [PLAN.md](../PLAN.md): Der S3 hört an der Anlage mit und sendet nichts. Jeden Schritt in Teil B spreche ich vorher einzeln ab.
 - Die Ergebnisse trage ich unten in die Tabelle ein.
 
+## Anstehend (Stand 15.11.2026)
+
+In dieser Reihenfolge empfohlen:
+
+| Nr. | Test | Wo | Braucht vorher |
+|---|---|---|---|
+| 1 | A9 Rest: Download-Modus mit dem CMT2300A an GPIO 46 (SCLK), flashen über COM | Tisch | nichts |
+| 2 | A10 Relais-Pins: low/high auf der Seite, Relais schaltet | Tisch | Relaistreiber aufgebaut |
+| 3 | A6c RS485 über Kreuz, alle drei Ketten, 115200 und 9600 Baud | Tisch | Firmware: UART des SC16IS752 senden und empfangen (fehlt noch) |
+| 4 | B3 CAN am JK-BMS, nur hören | Anlage | Absprache, 120 Ω am Modul entfernt |
+| 5 | B7 Regelung WP-HMS | Anlage | Absprache, MT681 WP an ESP_venus, OpenDTU WP aus |
+| 6 | B6 JK-BMS über RS485, Zellspannungen beider Packs | Anlage | Absprache, A6c, Firmware: JK-Protokoll (fehlt noch) |
+| 7 | B5 VE.Direct, die übrigen MPPT und der SmartShunt | Anlage | Absprache |
+| 8 | B4 VE.Bus am MultiPlus, nur hören | Anlage | Absprache, Bedingungen in der Tabelle unten |
+
+B3 vor B7, weil die Regelung den SoC über CAN liest. Ohne SoC gelten die Spannungsschwellen 53/48 V. A1 kommt mit der endgültigen Versorgung.
+
 ## Teil A: am Tisch
 
 ### A1 Versorgung
@@ -28,10 +45,8 @@ Der ADuM1201 hat am Eingang keinen Pull-up oder Pull-down (Datenblatt: ±10 µA,
 Messen gegen GND des S3:
 - VE.Bus: ADuM-Pin **A1** (GPIO 4)
 - CAN: ADuM-Pin **B1** (GPIO 14)
-- RS485 Pack 1: ADuM-Pin **A1** am ADuM für Pack 1 (TXB des SC16IS752)
-- RS485 Pack 2: ADuM-Pin **A1** am ADuM für Pack 2 (TXA des SC16IS752)
 
-Rechts treibt der SC16IS752 den Pin, nicht der S3. Nach seinem eigenen Reset sollte er high sein. Gemessen wird trotzdem in allen drei Zuständen.
+Die beiden RS485 zu den Packs brauchen das nicht: Ihren TX treibt der SC16IS752, sein RESET hängt nicht am S3.
 
 Jeweils in drei Zuständen (RST zieht EN des S3 auf low):
 1. **RST gedrückt halten** und dabei messen.
@@ -125,6 +140,7 @@ Voraussetzung: A1 bis A3 erledigt. Ablauf und Anschlussart stehen in [PLAN.md, P
 | B3 CAN am JK-BMS | A3 für GPIO 14 high, 120 Ω am Modul entfernt (der Bus hat schon zwei) | rund 27 Telegramme pro Sekunde, 21 IDs, Werte wie in Venus, Busfehler 0 | Fehlerzähler steigen, Venus meldet das BMS als weg |
 | B4 VE.Bus am MultiPlus | TX-Leitung nicht angeschlossen, Bus über 100 kΩ gemessen, Lötbrücke 120_S offen, Aufdruck `MAX13487EESA` | Sync „empfangen“, Prüfsummenfehler bleiben bei 0, DC-Strom und Temperatur plausibel | Venus oder MultiPlus melden VE.Bus-Fehler |
 | B5 VE.Direct | parallel an den Isolator-Ausgängen, FT4232 bleibt dran | Seriennummer erkannt, Instanz aus `devices.h`, Prüfsummen ohne Fehler, Werte wie in Venus | ein MPPT meldet Fehler #67 |
+| B7 Regelung WP-HMS | Absprache. OpenDTU WP aus, sonst regeln zwei. MT681 WP probehalber an ESP_venus (GPIO 6). Regelung im Reiter DTU einschalten. | WP-Zähler bleibt um 25 W Bezug, neues Limit nur bei mehr als 3 W Abweichung, unter 66 W Bedarf schaltet der HMS ab und danach wieder ein | der Zähler zeigt dauerhaft Einspeisung, der HMS folgt den Limits nicht, die Batterie fällt unter die Stoppschwelle, ohne dass er abschaltet |
 | B6 JK-BMS über RS485, Pack 1 und 2 | A6b und A6c erledigt. Die Abfrage sendet an das BMS (nur lesend), vorher absprechen. Nicht am selben Anschluss wie die OpenDTU WP, zwei Abfragende auf einem Bus stören sich. | je Pack alle Zellspannungen wie in der JK-App, Abfragen ohne Prüfsummenfehler | das BMS meldet Fehler, die OpenDTU WP verliert die Batteriedaten |
 
 ## Ergebnisse
@@ -149,3 +165,4 @@ Voraussetzung: A1 bis A3 erledigt. Ablauf und Anschlussart stehen in [PLAN.md, P
 | B4 VE.Bus am MultiPlus | | | |
 | B5 VE.Direct | 14.11.2026 | ein MPPT in Ordnung | Port 0, `HQ2503KHTNV` = solarcharger 294, 27 Blöcke ohne Prüfsummenfehler. RX und TX waren zuerst gekreuzt. |
 | B6 JK-BMS über RS485 | | | |
+| B7 Regelung WP-HMS | | | |
