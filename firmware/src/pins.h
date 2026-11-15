@@ -2,7 +2,7 @@
 // sind bisher nur VE.Bus RX/TX. GPIO 19/20 sind USB, 33-37 PSRAM, 43/44 die Konsole auf
 // UART0. Die Strapping-Pins 0 und 45 bleiben frei. GPIO 3 und 46 tragen nur Signale des
 // CMT2300A, die beim Start niemand treibt.
-// Frei: GPIO 17, 38.
+// Frei: GPIO 1, 17, 21, 39, 40, 47.
 #pragma once
 
 // ADuM1201 neben den S3-Pins, GPIO 4 und 5 laufen gerade hinueber, siehe docs/layout_lochraster.md
@@ -20,14 +20,15 @@
 #define I2C_SDA     16
 #define I2C_SCL     15
 
-// CMT2300A oben am S3 angeloetet: sechs Pins nebeneinander von GPIO 18 bis 10, dazu 3V3 und GND.
+// CMT2300A (Modul 10298-V1.0) per Pigtail oben am S3 angeloetet: sechs Pins nebeneinander von
+// GPIO 18 bis 10, dazu VCC an 3V3 und GND. Namen wie auf dem Modul, GPIO1 des Moduls bleibt frei.
 // GPIO 46 muss beim Reset low sein, sonst gibt es keinen Download-Modus. Der interne
-// Pull-down haelt ihn low, CLK ist am CMT2300A ein Eingang.
+// Pull-down haelt ihn low, SCLK ist am CMT2300A ein Eingang.
 #define CMT_GPIO2   18
-#define CMT_CS      8
+#define CMT_CSB     8
 #define CMT_SDIO    3
-#define CMT_CLK     46
-#define CMT_FCS     9
+#define CMT_SCLK    46
+#define CMT_FCSB    9
 #define CMT_GPIO3   10
 
 // Relais nebeneinander, Bestueckung nicht im Lochraster-Plan
@@ -39,19 +40,15 @@
 #define CAN_TX      14
 #define CAN_RX      13
 
-// E-Paper, optional
-#define EPD_SCK     39
-#define EPD_MOSI    40
-#define EPD_CS      41
-#define EPD_DC      42
-#define EPD_RST     2
-#define EPD_BUSY    1
+// JK-BMS ueber RS485, nur Zellspannungen: SC16IS752 (CJMCU-752) per SPI, Pack 1 an UART B,
+// Pack 2 an UART A (kuerzere Wege im Plan), dahinter je ADuM1201, B0505S und MAX13487. Die SPI-Pins liegen in denselben
+// Reihen wie die Pins des Moduls, die Draehte gehen gerade hinueber. UART0 bleibt Konsole.
+#define SC16_CS     2
+#define SC16_MOSI   42      // SI
+#define SC16_MISO   41      // SO
+#define SC16_SCK    38      // SCLK
 
-// JK-BMS ueber RS485, nur Zellspannungen. UART0 gibt dafuer im Betrieb die Konsole
-// ab, Flashen ueber COM (GPIO 43/44) bleibt davon unberuehrt.
-#define JK_RS485_RX 47
-#define JK_RS485_TX 21
-#define JK_RS485_DE -1      // MAX13487 schaltet die Richtung selbst
+// E-Paper: Stiftleiste im Plan entfallen. Frei sind noch GPIO 1, 17, 21, 39, 40, 47.
 
 // RGB-LED des Boards (WS2812), ueber die Loetbruecke "RGB" an GPIO 48
 #define RGB_LED     48

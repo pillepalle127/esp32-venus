@@ -375,7 +375,7 @@ static void start_radio()
 {
     SpiManagerInst.register_bus(SPI3_HOST);
     Hoymiles.init();
-    Hoymiles.initCMT(CMT_SDIO, CMT_CLK, CMT_CS, CMT_FCS, CMT_GPIO2, CMT_GPIO3);
+    Hoymiles.initCMT(CMT_SDIO, CMT_SCLK, CMT_CSB, CMT_FCSB, CMT_GPIO2, CMT_GPIO3);
     Hoymiles.getRadioCmt()->setCountryMode(CountryModeId_t::MODE_EU);
     Hoymiles.setPollInterval(5);
     cmt_found = Hoymiles.getRadioCmt()->isConnected();

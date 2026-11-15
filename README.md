@@ -44,7 +44,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 
 - Der USB-Host des S3 kann nur Full Speed und hat 8 Kanäle, jeder Endpunkt belegt einen. 2 × FT4232 geht deshalb nicht, schon einer braucht 9.
 - Der CH348 läuft am S3 mit Full Speed über 4 Bulk-Endpunkte, mit EP0 sind das 5 von 8 Kanälen. Sein Protokoll ist nicht offen. Die Befehle in meinem Treiber stammen aus `ch9344ser_linux` von WCH (GPL-2.0), verglichen mit dem ESPHome-PR #14586.
-- Ausweichlösung: SC16IS752 (SPI, 2 UARTs, 64 Byte FIFO, offenes Datenblatt von NXP, ESP-IDF-Treiber vorhanden). Der CH9434 wäre passend, ist aber sehr schlecht verfügbar.
+- Für die beiden RS485 zu den Packs nehme ich einen SC16IS752 (CJMCU-752): SPI, 2 UARTs, 64 Byte FIFO, offenes Datenblatt von NXP, ESP-IDF-Treiber vorhanden. Der CH9434 wäre passend, ist aber sehr schlecht verfügbar.
 - Pegel: Die MPPT senden mit 5 V, die Isolatoren bleiben. Der CH348 läuft laut Datenblatt nur mit 3,3 V (TXD high mindestens VCC − 0,4 V, RXD high ab 2,0 V), die Isolatoren laufen auf seiner Seite deshalb mit 3,3 V. 5 V vertragen nur RXD0, RXD2, RXD4 und RXD7. Die GPIOs des S3 vertragen gar keine 5 V.
 
 ## Belegung (wie verdrahtet, 14.11.2026)
@@ -55,14 +55,13 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 | MT681 Haus, UART2, 9600 Baud | RX | 7 | Pfostenstecker MT681: GND, 3V3, Haus, WP |
 | MT681 Wärmepumpe, RMT, 9600 Baud | RX | 6 | Pfostenstecker MT681 |
 | Kellerlüftung, I²C | SDA / SCL | 16 / 15 | die beiden BME280 (0x76 außen, 0x77), je ein Pfostenstecker: GND, 3V3, SDA, SCL |
-| Funk, ein CMT2300A für beide HMS | GPIO2, CS, SDIO, CLK, FCS, GPIO3 | 18, 8, 3, 46, 9, 10 | Modul oben am S3 angelötet, sechs Pins nebeneinander, dazu 3V3 und GND |
+| Funk, ein CMT2300A für beide HMS | GPIO2, CSB, SDIO, SCLK, FCSB, GPIO3 | 18, 8, 3, 46, 9, 10 | Modul per Pigtail oben am S3 angelötet, sechs Pins nebeneinander, dazu VCC an 3V3 und GND. GPIO1 bleibt frei |
 | Kellerlüftung | Lüfter | 11 | Relais |
 | Reserve | Relais 2 | 12 | Relais |
 | JK-BMS, TWAI, 500 kbit/s | TX / RX | 14 / 13 | TJA1050, über ADuM1201 und B0505S isoliert |
-| E-Paper, optional, SPI | SCK, MOSI, CS, DC, RST, BUSY | 39, 40, 41, 42, 2, 1 | Display |
-| JK-BMS, UART0 im Betrieb, RS485 | RX / TX | 47 / 21 | MAX13487, über ADuM1201 und B0505S isoliert, nur für die Zellspannungen |
+| JK-BMS, RS485 je Pack, SC16IS752 per SPI | CS, SI, SO, SCLK | 2, 42, 41, 38 | CJMCU-752, UART A und B je über ADuM1201, B0505S und MAX13487 isoliert, nur für die Zellspannungen |
 | RGB-LED des Boards | WS2812 | 48 | über die Lötbrücke „RGB“, Farbverlauf in 15 s |
-| Reserve | | 17, 38 | |
+| Reserve | | 1, 17, 21, 39, 40, 47 | Das E-Paper entfällt vorerst, für eins würden die 6 Pins reichen. |
 | Flashen, UART0 beim Start | TX / RX | 43 / 44 | COM-Buchse auf dem Board |
 | CH348, USB-Host | D− / D+ | 19 / 20 | native USB-Buchse, 5 V über die Brücke `USB-OTG` |
 | nicht beschalten | Strapping | 0, 45 | |
@@ -75,9 +74,9 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 | Port 7 | frei, für einen weiteren MPPT |
 
 - Zum JK-BMS laufen zwei Wege. **CAN steuert:** Ladegrenzen, Alarme, SoC, beide Packs zusammengefasst, ohne CAN keine DVCC-Vorgaben. **RS485 zeigt an:** einzelne Zellspannungen, die Regelung hängt nicht daran.
-- Der Netzzähler bleibt am eigenen UART, er liefert das Regelsignal fürs ESS. Der zweite MT681 läuft per RMT als Empfangs-UART. UART0 gibt im Betrieb die Konsole an den RS485 ab. Flashen über COM geht weiter, Logs und Updates laufen über WLAN.
+- Der Netzzähler bleibt am eigenen UART, er liefert das Regelsignal fürs ESS. Der zweite MT681 läuft per RMT als Empfangs-UART. Die Zellspannungen beider Packs laufen über den SC16IS752, UART0 bleibt Konsole.
 - Welcher MPPT an welchem Port hängt, spielt keine Rolle: Die Firmware erkennt jedes Gerät an seiner Seriennummer und gibt ihm die Instanz von heute.
-- GPIO 3 und 46 sind Strapping-Pins und tragen nur Signale des CMT2300A, die beim Start niemand treibt. GPIO 46 muss beim Reset low sein, sonst gibt es keinen Download-Modus. Der interne Pull-down hält ihn low, CLK ist am CMT2300A ein Eingang. GPIO 3 wirkt nach meiner Erinnerung nur mit gesetzter eFuse und dann nur auf die Wahl der JTAG-Quelle.
+- GPIO 3 und 46 sind Strapping-Pins und tragen nur Signale des CMT2300A, die beim Start niemand treibt. GPIO 46 muss beim Reset low sein, sonst gibt es keinen Download-Modus. Der interne Pull-down hält ihn low, SCLK ist am CMT2300A ein Eingang. GPIO 3 wirkt nach meiner Erinnerung nur mit gesetzter eFuse und dann nur auf die Wahl der JTAG-Quelle.
 - Ins Netz geht der S3 über sein WLAN. Ein Ausfall trifft nur die Verbindung zu ioBroker, nicht die Regelung.
 - VE.Bus braucht einen UART am S3: Alle 20 ms kommt ein Sync-Frame, gesendet wird nur in einem engen Fenster danach.
 - Beide HMS laufen über ein CMT2300A. Der Standort läuft seit Jahren, eine Reichweitenfrage gibt es nicht.
@@ -88,7 +87,7 @@ Lochraster-Plan: [docs/layout_lochraster.drawio](docs/layout_lochraster.drawio),
 
 - Die BMS schalten im Minus-Zweig. Hängt der S3 ohne Trennung an zwei Stellen, überbrückt seine Masse einen offenen BMS-Schalter. Ich trenne deshalb VE.Bus, CAN und RS485, jeweils an TX und RX, mit ADuM1201 und einem eigenen B0505S-1W je Busseite. GND bleibt am Bus.
 - Das ist eine Funktionstrennung gegen rund 60 V, kein Schutz vor Netzspannung. Prüfungen mit kV schaden: Der ADuM1201 ist für 2500 V rms über 1 Minute ausgelegt (Datenblatt, Tabelle 10). Es reicht der Durchgangstest.
-- Der ADuM1201 hängt auf der S3-Seite an 3,3 V, auf der Busseite an den 5 V des B0505S. Kanal A läuft von Seite 2 nach Seite 1, Kanal B umgekehrt. Auf dem Modul heißt die Ziffer 1 Eingang und 0 Ausgang: TX vom S3 geht auf A1 oder B1, RX kommt von A0 oder B0. Bei CAN und RS485 zeigt Seite 1 zum S3, bei VE.Bus Seite 2, damit sich die Drähte zum MAX13487 nicht kreuzen.
+- Der ADuM1201 hängt auf der S3-Seite an 3,3 V, auf der Busseite an den 5 V des B0505S. Kanal A läuft von Seite 2 nach Seite 1, Kanal B umgekehrt. Auf dem Modul heißt die Ziffer 1 Eingang und 0 Ausgang: TX vom S3 geht auf A1 oder B1, RX kommt von A0 oder B0. Bei CAN zeigt Seite 1 zum S3, bei VE.Bus und den beiden RS485 zu den Packs Seite 2, damit die Drähte zum MAX13487 kreuzungsfrei laufen. Die ADuM1201 der beiden Packs hängen unter der Platine, mit den Bauteilen zur Platine. Von oben gesehen liegt Seite 1 zum MAX13487 als U1, A0, B1, G1: VCC, TXD, RXD und GND gehen gerade hinüber. Pack 1 hängt an UART B, Pack 2 an UART A: So liegen die Wege ineinander, und es kreuzen sich nur TX und RX je Pack einmal. Jedes Pack hat seine eigene Trennung, eine gemeinsame würde ihre Massen über den SC16IS752 verbinden.
 - Der B0505S ist ungeregelt. Der MAX13487 braucht laut Datenblatt 4,75–5,25 V, der TJA1050 nach meiner Erinnerung ebenso. Ist die Spannung bei wenig Last zu hoch, hilft ein Lastwiderstand: 250 Ω sind 10 % Last.
 - Der ADuM1201AR reicht für CAN: rund 0,8 µs Laufzeit im schlechtesten Fall, der S3 tastet nach 1,6 µs ab. Der Selbsttest am Tisch lief fehlerfrei.
 - **MAX13487 (VE.Bus, RS485):** schaltet die Richtung selbst, DE entfällt. `ve.bus-library` ist laut Doku damit am MultiPlus getestet. Der Aufdruck muss `MAX13487EESA` sein. Vor dem Anschluss an VE.Bus: A gegen B ohne 120-Ω-Abschluss, Lötbrücke 120_S offen.
@@ -139,6 +138,7 @@ ioBroker soll nichts merken: gleiche Adresse 192.168.1.10:1883, Benutzer `remote
 - **VE.Bus-Timing (03.11.2026):** Ein zweiter S3 spielt den MultiPlus. 9000 von 9000 Antworten, Beginn 8,95–10,53 ms nach dem Sync. Unter künstlicher Last Core 1 bei 5 %, Core 0 bei rund 50 %. Ob ein echter MultiPlus diese Zeitpunkte annimmt, zeigt erst Phase 2.
 - **Testfirmware (Env `s3`, 14.11.2026):** Eine Webseite zeigt, was an den Anschlüssen ankommt: `http://<IP>/` oder `http://esp32-venus.local/`. Gesendet wird nur auf Knopfdruck (RS485-Test, CAN-Selbsttest), sonst hört der S3 nur zu. Die Seite hat keine Anmeldung. Das WLAN steht in `firmware/src/wifi_secrets.h`, nicht im Repo. Die alte Gesamtfirmware mit CH348-Schleifentest baut als Env `s3_timing` aus `firmware/timing/`.
 - **Am Tisch geprüft (14.11.2026):** beide BME280, beide MT681 am echten Zähler (RMT ohne Rahmenfehler), CAN-Kette per Selbsttest, CH348 mit einem MPPT, Isolation, TX-Pegel bei Reset. Die linke RS485-Kette ist noch offen.
+- **Plan (15.11.2026):** Rechts sitzen jetzt der SC16IS752 und darunter die beiden RS485 zu den Packs, die E-Paper-Stiftleiste entfällt. Draht- und Netzliste geprüft.
 - **Bekannt:** Nach einem Neustart des S3 meldet sich der CH348 nur, wenn er selbst kurz ohne Strom war. Im Fritz-Mesh muss der S3 den stärksten Zugangspunkt wählen, das tut die Firmware jetzt.
 
 ## Kabelwege und Platz des S3
@@ -198,8 +198,8 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 
 - Die DVCC- und ESS-Einstellungen, die der S3 übernehmen muss.
 - Wer `mqtt_pv_100` speist. In `README.md` von pv-prognose heißt es, Venus erfasse Growatt und HMS als PV-Wechselrichter. Die Zuordnung habe ich nicht geprüft.
-- Einzelzellen beider Packs: DTUoB_WP (192.168.1.30, `OpenDTU-WP-0DB714`) liest per RS485 nur ein Pack, laut ioBroker am 14.11.2026 Adresse 1, 15 Zellen, 220 Ah. CAN meldet 440 Ah und 2 Module. Für das zweite Pack braucht es voraussichtlich einen zweiten RS485, außer die Verbindung zwischen den BMS trägt dessen Daten. Das klärt ein Mithör-Test mit dem linken Kanal.
-- Falls ein zweiter RS485 nötig ist: SC16IS752 am SPI-Bus des E-Paper, MISO und CS auf GPIO 17 und 38, das Display bleibt. Beide Packs an seine zwei UARTs, UART0 bleibt Konsole. Getrennt wird je Pack zwischen SC16IS752 und MAX13487, sonst wären die Massen beider Packs verbunden. Laut esphome-jk-bms ist je Modbus-Bus nur ein Master erlaubt, und ein BMS mit Adresse 0 ist selbst Master.
+- Einzelzellen: DTUoB_WP (192.168.1.30, `OpenDTU-WP-0DB714`) liest per RS485 nur ein Pack, laut ioBroker am 14.11.2026 Adresse 1, 15 Zellen, 220 Ah. CAN meldet 440 Ah und 2 Module. Deshalb bekommt jedes Pack einen eigenen RS485 am SC16IS752. Laut esphome-jk-bms ist je Modbus-Bus nur ein Master erlaubt, und ein BMS mit Adresse 0 ist selbst Master.
+- Quarzfrequenz des CJMCU-752, die Firmware braucht sie für die Baudraten.
 - Baudrate am RS485 des JK-BMS.
 - GND am CAN- und RS485-Port des JK-BMS gegen B− messen, dazu VE.Bus Pin 3 gegen DC− des MP2. Ist ein Port schon getrennt, entfällt dort die Trennung.
 - Der CH348 nach einem Neustart des S3: weiter beobachten.

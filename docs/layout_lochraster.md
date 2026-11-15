@@ -11,21 +11,21 @@ Board: ESP32-S3-WROOM-1 N16R8. Pinbelegung wie in `firmware/src/pins.h`. Jede Ze
   3V3-Schiene ---------------| 3V3       GND |--------------- GND-Schiene
   CMT2300A ------------------| 3V3    TX  43 |  frei
                              | RST    RX  44 |  frei
-┌ ADuM, MAX13487  -- TX -----|  4          1 |----- BUSY --┐ E-Paper
-└ VE.Bus          -- RX -----|  5          2 |----- RST ---┤ optional
-┌ Stecker MT681   -- WP -----|  6         42 |----- DC ----┤
-└                 -- Haus ---|  7         41 |----- CS ----┤
-┌ Stecker BME280  -- SCL ----| 15         40 |----- MOSI --┤
-└                 -- SDA ----| 16         39 |----- SCK ---┘
-                     frei    | 17         38 |  frei
+┌ ADuM, MAX13487  -- TX -----|  4          1 |  frei
+└ VE.Bus          -- RX -----|  5          2 |----- CS ----┐ SC16IS752,
+┌ Stecker MT681   -- WP -----|  6         42 |----- SI ----┤ Drähte gerade
+└                 -- Haus ---|  7         41 |----- SO ----┤ hinüber
+┌ Stecker BME280  -- SCL ----| 15         40 |  frei       │
+└                 -- SDA ----| 16         39 |  frei       │
+                     frei    | 17         38 |----- SCLK --┘
 ┌ CMT2300A        -- GPIO2 --| 18         37 |  belegt
-│ oben am S3      -- CS -----|  8         36 |  belegt
+│ oben am S3      -- CSB ----|  8         36 |  belegt
 │ angelötet       -- SDIO ---|  3         35 |  belegt
-│                 -- CLK ----| 46          0 |  frei
-│                 -- FCS ----|  9         45 |  frei
+│                 -- SCLK ---| 46          0 |  frei
+│                 -- FCSB ---|  9         45 |  frei
 └                 -- GPIO3 --| 10         48 |  RGB-LED des Boards
-  Lüfter          -- OUT ----| 11         47 |----- RX ----┐ ADuM, MAX13487
-  Relais 2        -- OUT ----| 12         21 |----- TX ----┘ RS485 JK-BMS
+  Lüfter          -- OUT ----| 11         47 |  frei
+  Relais 2        -- OUT ----| 12         21 |  frei
 ┌ ADuM, TJA1050   -- RX -----| 13         20 |  USB, frei
 └ CAN             -- TX -----| 14         19 |  USB, frei
   5 V Einspeisung -----------| 5V        GND |--------------- GND-Schiene
@@ -35,9 +35,9 @@ Board: ESP32-S3-WROOM-1 N16R8. Pinbelegung wie in `firmware/src/pins.h`. Jede Ze
                        nativ: CH348    COM: Flashen
 ```
 
-Der CH348 hängt am USB-Kabel. Der CMT2300A ist oben am S3 angelötet, an den sechs Pins von GPIO 18 bis GPIO 10, am zweiten 3V3-Pin und am untersten GND-Pin. Auf der Platine hat er keinen Draht.
+Der CH348 hängt am USB-Kabel. Der CMT2300A ist per Pigtail oben am S3 angelötet, an den sechs Pins von GPIO 18 bis GPIO 10, am zweiten 3V3-Pin und am untersten GND-Pin. Die Signalnamen stehen so auf dem Modul, GPIO1 bleibt frei. Auf der Platine hat er keinen Draht.
 
-GPIO 3 und 46 sind Strapping-Pins. GPIO 46 muss beim Reset low sein, sonst kommt der S3 nicht in den Download-Modus. Der interne Pull-down hält ihn low, und CLK ist am CMT2300A ein Eingang. GPIO 3 trägt SDIO, das treibt beim Start niemand.
+GPIO 3 und 46 sind Strapping-Pins. GPIO 46 muss beim Reset low sein, sonst kommt der S3 nicht in den Download-Modus. Der interne Pull-down hält ihn low, und SCLK ist am CMT2300A ein Eingang. GPIO 3 trägt SDIO, das treibt beim Start niemand.
 
 Bei den Pfostensteckern kreuzen sich zwei Drähte zweimal ohne Verbindung: SCL läuft von GPIO 15 neben dem S3 nach unten zu den C-Pins, SDA von GPIO 16 kreuzt es auf dem Weg zu den D-Pins. SDA auf 16 und SCL auf 15 ist so verdrahtet und am 14.11.2026 mit einem BME280 getestet. Beim MT681-Stecker kreuzen sich die beiden Zählerdrähte einmal ohne Verbindung: Haus liegt auf GPIO 7, WP auf GPIO 6, so ist es verdrahtet. Ebenso kreuzen sich die CAN-Drähte einmal: RX liegt auf GPIO 13, TX auf GPIO 14, so ist es verdrahtet.
 
@@ -54,9 +54,17 @@ Nach Bereichen:
 | Seite | Oben | Mitte | Unten |
 |---|---|---|---|
 | Links | MAX13487 VE.Bus außen, daneben ADuM VE.Bus und Pfostenstecker | B0505S VE.Bus | CAN |
-| Rechts | E-Paper, MAX13487 JK-BMS außen | ADuM und B0505S JK-BMS | frei |
+| Rechts | SC16IS752 (CJMCU-752) | MAX13487 Pack 1 waagerecht, ragt über den Rand | MAX13487 Pack 2 waagerecht, ragt über den Rand |
 
-Die Klemmen beider MAX13487-Module zeigen zur Oberkante, der CAN-Stecker liegt an der Unterkante.
+Die Klemmen des MAX13487 für VE.Bus zeigen zur Oberkante, die der beiden Module für die Packs nach rechts über den Rand. Der CAN-Stecker liegt an der Unterkante.
+
+Rechts, die beiden RS485 zu den Packs:
+- Der SC16IS752 sitzt oben rechts, wo vorher die Stiftleiste des E-Paper war. Seine Einzelreihe (VCC bis SDA/VSS) liegt in den Reihen von GPIO 43 bis 37, CS, SI, SO und SCLK gehen gerade hinüber zu GPIO 2, 42, 41 und 38. I2C/SPI und SDA/VSS liegen an GND (SPI-Modus), RESET an 3V3, IRQ bleibt frei. Die Beschriftung steht auf der Unterseite des Moduls: Von oben gesehen liegt die Einzelreihe links, TXA bis CTSB in der Doppelreihe ganz rechts.
+- Darunter die beiden MAX13487-Module waagerecht übereinander, Pins links, Klemmen rechts über den Rand.
+- Der ADuM1201 jedes Packs hängt unter der Platine unter seinem Modul, mit den Bauteilen zur Platine. Seite 1 zeigt zum MAX13487, Seite 2 zum SC16IS752, wie beim ADuM für VE.Bus. Von oben gesehen liegt Seite 1 als U1, A0, B1, G1 in den Reihen von VCC, TXD, RXD und GND: Alle vier gehen gerade hinüber, ohne Kreuzung. Kanal A läuft vom SC16IS752 (A1) zum TXD (A0), Kanal B vom RXD (B1) zum SC16IS752 (B0).
+- Der B0505S jedes Packs steht links neben seinem Modul.
+- Jedes Pack hat seine eigene Trennung. Eine gemeinsame würde die Massen beider Packs über den SC16IS752 verbinden.
+- Pack 1 hängt an UART B, Pack 2 an UART A. So liegen die Wege ganz rechts ineinander, und es kreuzen sich nur TX und RX je Pack einmal. Mit A für Pack 1 wären es sechs Kreuzungen. Gefädelt geht beides.
 
 Der ADuM1201 für VE.Bus sitzt oben neben den S3-Pins, oberhalb der Pfostenstecker. GPIO 4 und 5 laufen gerade hinüber. Die vier Drähte zum MAX13487 laufen unter dem Modul und kreuzen sich nicht:
 

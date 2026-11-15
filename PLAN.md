@@ -85,7 +85,7 @@ Der S3 rechnet alles, schickt aber nichts an die Geräte. So habe ich es auch be
    - `DTUoB_WP/1164a012bcc6/0/yieldtotal`, `powerdc`
    - `DTUoB_WP/powermeter/*`
 
-Der Modus steht heute nach einem Neustart auf 0, darauf verlässt sich das Skript. Der S3 übernimmt von der DTU den zweiten MT681 (GPIO 6) und die RS485-Leitung zum JK-BMS (UART0 auf GPIO 47 und 21). Bis dahin kommen die Zellspannungen weiter von der DTU per MQTT. Beim Umstecken klärt sich, ob ein Anschluss für beide Packs reicht. MultiPlus und DTUoB_WP teilen sich dann die Entladegrenze des BMS. Das ist neu, weil heute keiner vom anderen weiß.
+Der Modus steht heute nach einem Neustart auf 0, darauf verlässt sich das Skript. Der S3 übernimmt von der DTU den zweiten MT681 (GPIO 6) und die RS485-Leitung zum JK-BMS (über den SC16IS752, je Pack ein eigener RS485). Bis dahin kommen die Zellspannungen weiter von der DTU per MQTT. Jedes Pack bekommt einen eigenen Anschluss, weil DTUoB_WP über RS485 nur eines liest. MultiPlus und DTUoB_WP teilen sich dann die Entladegrenze des BMS. Das ist neu, weil heute keiner vom anderen weiß.
 
 3. **Kellerlüftung.** Die beiden BME280, der Lüfter und die Regelung aus `kellerlueftung.be` ziehen vom Tasmota um. Der S3 spricht dafür auch die Themen des Tasmota, damit die Datenpunkte unter `sonoff.0.Tasm_Kellercenter2` gleich bleiben. Danach entfällt der Tasmota.
 
@@ -120,15 +120,15 @@ Der S3 bekommt eine eigene Webseite, sie muss sein. Sie ersetzt auch das HDMI-Di
 - **Einstellen, ab Phase 4:** ESS-Modus, Mindest-SoC, Netz-Sollwert, Firmware-Update. Nur mit Passwort.
 - Sie läuft auf Core 0 und blockiert die Regelung nie. Ein Aufruf darf VE.Bus, DVCC und Zähler nicht berühren.
 - Die Diagramme bleiben in ioBroker. Die Seite zeigt den aktuellen Stand und funktioniert auch ohne ioBroker.
-- **E-Paper, optional:** Die Pins sind reserviert. Es zeigt langsame Werte wie SoC, PV und Fehler, ein paar Mal pro Stunde neu gezeichnet.
+- **E-Paper, optional:** entfällt vorerst, die Stiftleiste ist aus dem Plan raus. Für ein Display reichen die 6 freien Pins (1, 17, 21, 39, 40, 47).
 
 ## Hardware (vorläufig)
 
 - ESP32-S3 mit 16 MB Flash und 8 MB PSRAM, COM-Port und nativem USB.
 - Ein CMT2300A mit Antenne für beide HMS.
-- E-Paper-Display, optional.
 - CH348 (oder 4 × SC16IS752), die vorhandenen Isolatoren für die 7 VE.Direct-Kanäle.
-- VE.Bus und JK-BMS (RS485): je MAX13487-Modul, ADuM1201-Modul (ADuM1201AR) und B0505S-1W. Keine DE-Leitung, der MAX13487 schaltet die Richtung selbst.
+- VE.Bus und die beiden JK-BMS-Packs (RS485): je MAX13487-Modul, ADuM1201-Modul (ADuM1201AR) und B0505S-1W, also dreimal. Keine DE-Leitung, der MAX13487 schaltet die Richtung selbst.
+- SC16IS752 (CJMCU-752) für die beiden RS485 zu den Packs.
 - JK-BMS (CAN): TJA1050-Modul, ADuM1201-Modul (ADuM1201AR) und B0505S-1W.
 - Die Bestückung an den Relais-Pins (GPIO 11 und 12) mache ich anders, sie steht nicht im Lochraster-Plan.
 - Zwei Leseköpfe für die beiden MT681, rund 2 m Leitung.

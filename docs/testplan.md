@@ -72,6 +72,14 @@ Am Bus hängt nichts außer dem Prüfgerät, kein MultiPlus.
 - Reiter CAN → **Selbsttest starten**. Der S3 schaltet kurz auf „ohne Quittung“, sendet 10 Telegramme und liest jedes über TJA1050 und ADuM zurück, danach hört er wieder nur zu. Das prüft die Kette in beide Richtungen, auch die Laufzeit durch den ADuM. Er sendet dabei auf CAN, also nur ohne BMS am Bus, mit dem 120-Ω-Widerstand des Moduls.
 - **In Ordnung:** 10 gesendet, 10 richtig zurück, TX-Fehlerzähler 0.
 
+### A6b Rechte RS485-Ketten (SC16IS752, Pack 1 und 2)
+
+**Die Firmware dafür fehlt noch:** Treiber für den SC16IS752 und ein RS485-Test je Kanal auf der Seite.
+- SPI: Die Firmware schreibt und liest das Scratchpad-Register des SC16IS752. In Ordnung, wenn der geschriebene Wert zurückkommt.
+- Pack 1 hängt an UART B, Pack 2 an UART A.
+- Je Kanal wie A6: Echo, Dauersenden mit Messung zwischen A und B oder ein USB-RS485-Adapter. Am Bus hängt dabei nichts.
+- Dafür brauche ich die Frequenz des Quarzes auf dem CJMCU-752.
+
 ### A8 CH348
 
 - CH348 an die native Buchse, 5 V über die USB-OTG-Brücke. COM und native Buchse nie gleichzeitig am PC.
@@ -109,6 +117,7 @@ Voraussetzung: A1 bis A3 erledigt. Ablauf und Anschlussart stehen in [PLAN.md, P
 | A4 I²C und BME280 | 14.11.2026 | in Ordnung | SDA und SCL waren anders verdrahtet als geplant, übernommen: SDA 16, SCL 15. 0x76 außen, 0x77 der zweite Sensor, Lesefehler 0. |
 | A5 MT681-Eingänge | 14.11.2026 | entfällt | Gleich am echten Zähler geprüft, siehe B1 und B2. |
 | A6 Linke RS485-Kette | 14.11.2026 | teilweise | Pinprüfung in Ordnung: TX (GPIO 4) offen, RX (GPIO 5) vom ADuM high getrieben. Gesendet 15 Bytes, kein Echo. Ob das Modul sein Senden zurückgibt, ist offen. Sendeweg: A gegen B beim 10-s-Dauersenden messen. |
+| A6b Rechte RS485-Ketten | | | |
 | A7 CAN-Kette | 14.11.2026 | in Ordnung | 10 gesendet, 10 richtig zurück, TX-Fehlerzähler 0, Busfehler 0. Zuerst fehlgeschlagen: Die Pins waren noch nicht verdrahtet, danach TX und RX vertauscht. Übernommen wie verdrahtet: TX 14, RX 13. Der Selbsttest liest jetzt vorher beide Pins und sendet nur, wenn RX getrieben und TX offen ist. |
 | A8 CH348 | 14.11.2026 | mit Einschränkung | Version `8A 88 80 00`, 8 Ports mit 19200 Baud. Nach einem Neustart des S3 meldet er sich nur, wenn er selbst kurz ohne Strom war. |
 | A9 CMT2300A | | | |
