@@ -1,6 +1,7 @@
 // Testseite und JSON-Schnittstelle. Laeuft in der Netz-Task (Core 0), wie I2C und
 // der RS485-Monitor, deshalb braucht es dafuer keine Sperren.
 #include <ESPmDNS.h>
+#include <esp_flash.h>
 #include <esp_ota_ops.h>
 #include <WebServer.h>
 #include <WiFi.h>
@@ -13,6 +14,7 @@
 #include "log.h"
 #include "radio.h"
 #include "sc16.h"
+#include "sysinfo.h"
 #include "util.h"
 #include "web_page.h"
 
@@ -27,21 +29,6 @@ static esp_ota_handle_t ota_handle;
 static bool ota_open;
 static esp_err_t ota_err = ESP_FAIL;
 
-static const char *reset_reason()
-{
-    switch (esp_reset_reason()) {
-    case ESP_RST_POWERON: return "Einschalten";
-    case ESP_RST_EXT: return "Reset-Pin";
-    case ESP_RST_SW: return "Software";
-    case ESP_RST_PANIC: return "Absturz";
-    case ESP_RST_INT_WDT: return "Watchdog (Interrupt)";
-    case ESP_RST_TASK_WDT: return "Watchdog (Task)";
-    case ESP_RST_WDT: return "Watchdog";
-    case ESP_RST_BROWNOUT: return "Unterspannung";
-    case ESP_RST_DEEPSLEEP: return "Tiefschlaf";
-    default: return "unbekannt";
-    }
-}
 
 // Zahl als JSON, NaN und Unendlich als null (sonst ist das ganze JSON ungueltig)
 static void addf(String &o, const char *key, double v, int dec)
@@ -91,7 +78,7 @@ static void handle_status()
              "\"build\":\"%s\",\"mac\":\"%s\",\"ip\":",
              (unsigned long)(millis() / 1000), heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
              heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL), heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
-             wl ? WiFi.RSSI() : 0, left_mode == LEFT_RS485 ? "rs485" : "vebus", reset_reason(), BUILD,
+             wl ? WiFi.RSSI() : 0, left_mode == LEFT_RS485 ? "rs485" : "vebus", sys_reset_reason(), BUILD,
              WiFi.macAddress().c_str());
     o += b;
     if (wl) {
@@ -101,6 +88,7 @@ static void handle_status()
     } else {
         o += "null";
     }
+    sys_json(o);
     o += "}";
 
     // BME280
@@ -157,6 +145,8 @@ static void handle_status()
     radio.json(o);
     o += ",\"dpl\":";
     dpl_json(o);
+    o += ",\"sc16\":";
+    sc16_json(o);
 
     // CH348 und VE.Direct
     o += ",\"ch348\":{\"ok\":";
@@ -256,51 +246,173 @@ static int hexval(char c)
     return -1;
 }
 
-static void handle_send()
+// Nutzdaten aus ?text= oder ?hex=. Liefert eine Fehlermeldung oder nullptr.
+static const char *payload(uint8_t *d, size_t max, size_t &n)
 {
-    if (left_mode != LEFT_RS485) {
-        server.send(200, "application/json", "{\"err\":\"nur im RS485-Test\"}");
-        return;
-    }
-    if (!rs_left.tx_ok) {
-        server.send(200, "application/json", "{\"err\":\"Senden gesperrt, siehe Pinpruefung\"}");
-        return;
-    }
-    uint8_t d[256];
-    size_t n = 0;
+    n = 0;
     if (server.hasArg("text")) {
         String t = server.arg("text");
         t.replace("\\r", "\r");
         t.replace("\\n", "\n");
-        n = t.length() < sizeof(d) ? t.length() : sizeof(d);
+        n = t.length() < max ? t.length() : max;
         memcpy(d, t.c_str(), n);
-    } else {
-        String h = server.arg("hex");
-        int hi = -1;
-        for (size_t i = 0; i < h.length() && n < sizeof(d); i++) {
-            char c = h[i];
-            if (c == ' ' || c == ',' || c == ':') {
-                continue;
-            }
-            int v = hexval(c);
-            if (v < 0) {
-                server.send(200, "application/json", "{\"err\":\"kein Hex\"}");
-                return;
-            }
-            if (hi < 0) {
-                hi = v;
-            } else {
-                d[n++] = (uint8_t)(hi << 4 | v);
-                hi = -1;
-            }
+        return nullptr;
+    }
+    String h = server.arg("hex");
+    int hi = -1;
+    for (size_t i = 0; i < h.length() && n < max; i++) {
+        char c = h[i];
+        if (c == ' ' || c == ',' || c == ':') {
+            continue;
         }
-        if (hi >= 0) {
-            server.send(200, "application/json", "{\"err\":\"ungerade Zahl Hex-Ziffern\"}");
-            return;
+        int v = hexval(c);
+        if (v < 0) {
+            return "kein Hex";
         }
+        if (hi < 0) {
+            hi = v;
+        } else {
+            d[n++] = (uint8_t)(hi << 4 | v);
+            hi = -1;
+        }
+    }
+    return hi >= 0 ? "ungerade Zahl Hex-Ziffern" : nullptr;
+}
+
+static void send_err(const char *e)
+{
+    String o = "{\"err\":";
+    json_str(o, e);
+    o += '}';
+    server.send(200, "application/json", o);
+}
+
+static void handle_send()
+{
+    if (left_mode != LEFT_RS485) {
+        send_err("nur im RS485-Test");
+        return;
+    }
+    if (!rs_left.tx_ok) {
+        send_err("Senden gesperrt, siehe Pinpruefung");
+        return;
+    }
+    uint8_t d[256];
+    size_t n;
+    const char *e = payload(d, sizeof(d), n);
+    if (e) {
+        send_err(e);
+        return;
     }
     rs_left.send(d, n);
     server.send(200, "application/json", "{}");
+}
+
+// Rechte Kanaele: ?ch=A|B, Baudrate mit &baud=, Senden mit &hex= oder &text=
+static void handle_pack()
+{
+    String c = server.arg("ch");
+    uint8_t ch = c == "A" ? SC16_CH_A : c == "B" ? SC16_CH_B : 0xFF;
+    if (ch == 0xFF || !sc16_ok()) {
+        send_err(sc16_ok() ? "Kanal A oder B" : "SC16IS752 antwortet nicht");
+        return;
+    }
+    if (server.hasArg("baud")) {
+        if (!sc16_set_baud(ch, server.arg("baud").toInt())) {
+            send_err("Baudrate geht mit dem Quarz nicht ohne Rest");
+            return;
+        }
+    }
+    if (server.hasArg("hex") || server.hasArg("text")) {
+        uint8_t d[256];
+        size_t n;
+        const char *e = payload(d, sizeof(d), n);
+        if (e) {
+            send_err(e);
+            return;
+        }
+        if (!sc16_send(ch, d, n)) {
+            send_err("Senden fehlgeschlagen");
+            return;
+        }
+    }
+    server.send(200, "application/json", "{}");
+}
+
+// Testplan A6c: jeder Kanal sendet eine eigene Folge, alle anderen hoeren mit.
+// Teilnehmer: 0 links (UART1, nur im RS485-Test mit freiem Senden), 1 Pack 1 (UART B), 2 Pack 2 (UART A)
+static void handle_cross()
+{
+    static const char *names[] = {"links", "Pack 1", "Pack 2"};
+    static const uint8_t sc_ch[] = {0xFF, SC16_CH_B, SC16_CH_A};
+    bool left_ok = left_mode == LEFT_RS485 && rs_left.tx_ok;
+    bool right_ok = sc16_ok();
+    char b[96];
+    snprintf(b, sizeof(b), "{\"left\":%s,\"right\":%s,\"baud\":[%lu,%lu,%lu],\"res\":[", left_ok ? "true" : "false",
+             right_ok ? "true" : "false", (unsigned long)(left_ok ? rs_left.baud : 0),
+             (unsigned long)sc16_baud(SC16_CH_B), (unsigned long)sc16_baud(SC16_CH_A));
+    String o = b;
+    bool first = true;
+    for (int s = 0; s < 3; s++) {
+        if ((s == 0 && !left_ok) || (s > 0 && !right_ok)) {
+            continue;
+        }
+        uint8_t pat[4] = {0x55, 0xAA, (uint8_t)(0x30 + s), 0xC3};
+        if (left_ok) {
+            rs_left.poll();
+            rs_left.capture(true);
+        }
+        if (right_ok) {
+            sc16_capture(SC16_CH_A, true);
+            sc16_capture(SC16_CH_B, true);
+        }
+        if (s == 0) {
+            rs_left.send(pat, sizeof(pat));
+        } else {
+            sc16_send(sc_ch[s], pat, sizeof(pat));
+        }
+        // Bei 2400 Baud brauchen 4 Bytes knapp 17 ms
+        uint32_t t0 = millis();
+        while (millis() - t0 < 80) {
+            if (left_ok) {
+                rs_left.poll();
+            }
+            delay(1);
+        }
+        o += first ? "{\"from\":" : ",{\"from\":";
+        first = false;
+        json_str(o, names[s]);
+        o += ",\"sent\":";
+        json_hex(o, pat, sizeof(pat));
+        o += ",\"to\":[";
+        bool f2 = true;
+        for (int r = 0; r < 3; r++) {
+            if ((r == 0 && !left_ok) || (r > 0 && !right_ok)) {
+                continue;
+            }
+            uint8_t got[64];
+            size_t n = r == 0 ? rs_left.captured(got, sizeof(got)) : sc16_captured(sc_ch[r], got, sizeof(got));
+            bool ok = n == sizeof(pat) && memcmp(got, pat, n) == 0;
+            o += f2 ? "{\"name\":" : ",{\"name\":";
+            f2 = false;
+            json_str(o, names[r]);
+            o += r == s ? ",\"self\":true" : ",\"self\":false";
+            o += ok ? ",\"ok\":true,\"got\":" : ",\"ok\":false,\"got\":";
+            json_hex(o, got, n);
+            o += '}';
+        }
+        o += "]}";
+        if (left_ok) {
+            rs_left.capture(false);
+        }
+        if (right_ok) {
+            sc16_capture(SC16_CH_A, false);
+            sc16_capture(SC16_CH_B, false);
+        }
+        logf("RS485-Kreuztest: %s sendet 55 AA %02X C3", names[s], pat[2]);
+    }
+    o += "]}";
+    server.send(200, "application/json", o);
 }
 
 // Hex-Zahl mit genau n Stellen, sonst false
@@ -468,6 +580,79 @@ void web_begin()
         server.send(200, "application/json", "{}");
     });
     server.on("/api/dev", HTTP_GET, handle_dev);
+    // Log als Text, auch das vom Lauf vor dem letzten Neustart
+    server.on("/log.txt", HTTP_GET, []() {
+        String o;
+        log_text(o);
+        server.sendHeader("Content-Disposition", "inline; filename=esp_venus_log.txt");
+        server.send(200, "text/plain; charset=utf-8", o);
+    });
+    // Coredump nach einem Absturz, zum Entschluesseln mit der ELF-Datei des Builds
+    server.on("/coredump.elf", HTTP_GET, []() {
+        uint32_t addr, size;
+        if (!sys_coredump(addr, size)) {
+            server.send(404, "text/plain; charset=utf-8", "kein Coredump im Flash");
+            return;
+        }
+        server.sendHeader("Content-Disposition", "attachment; filename=coredump.elf");
+        server.setContentLength(size);
+        server.send(200, "application/octet-stream", "");
+        uint8_t buf[1024];
+        for (uint32_t off = 0; off < size; off += sizeof(buf)) {
+            uint32_t n = size - off < sizeof(buf) ? size - off : sizeof(buf);
+            if (esp_flash_read(NULL, buf, addr + off, n) != ESP_OK) {
+                break;
+            }
+            server.sendContent((const char *)buf, n);
+        }
+    });
+    server.on("/api/coredump_erase", HTTP_GET, []() {
+        sys_coredump_erase();
+        server.send(200, "application/json", "{}");
+    });
+    server.on("/api/boot_other", HTTP_GET, []() {
+        String msg;
+        bool ok = sys_boot_other(msg);
+        String o = "{\"ok\":";
+        o += ok ? "true" : "false";
+        o += ",\"msg\":";
+        json_str(o, msg.c_str());
+        o += '}';
+        server.send(200, "application/json", o);
+        if (ok) {
+            restart_at = millis() + 500;
+        }
+    });
+    // Absturztest fuer Log und Coredump, nur mit ?wirklich=1
+    server.on("/api/crash_test", HTTP_GET, []() {
+        if (server.arg("wirklich") != "1") {
+            server.send(200, "application/json", "{\"err\":\"nur mit ?wirklich=1\"}");
+            return;
+        }
+        server.send(200, "application/json", "{}");
+        logf("Absturztest auf Wunsch, gleich folgt ein Absturz");
+        delay(300);
+        *(volatile uint32_t *)0 = 0;
+    });
+    server.on("/api/pack", HTTP_GET, handle_pack);
+    server.on("/api/pack_loop", HTTP_GET, []() {
+        String o = "[";
+        for (uint8_t ch : {SC16_CH_B, SC16_CH_A}) {
+            if (o.length() > 1) {
+                o += ',';
+            }
+            sc16_loopback(ch, o);
+        }
+        o += ']';
+        server.send(200, "application/json", o);
+    });
+    server.on("/api/pack_burst", HTTP_GET, []() {
+        String c = server.arg("ch");
+        uint8_t ch = c == "A" ? SC16_CH_A : c == "B" ? SC16_CH_B : 0xFF;
+        bool ok = ch != 0xFF && sc16_burst(ch, server.arg("b") == "55" ? 0x55 : 0x00);
+        server.send(200, "application/json", ok ? "{}" : "{\"err\":\"Kanal A oder B\"}");
+    });
+    server.on("/api/rs485_cross", HTTP_GET, handle_cross);
     server.on("/api/sc16_test", HTTP_GET, []() {
         String o;
         sc16_selftest(o);

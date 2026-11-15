@@ -69,6 +69,9 @@ void SerialMonitor::poll()
             cur.tx = false;
         }
         uint8_t b = ser->read();
+        if (cap_on && cap_n < sizeof(cap)) {
+            cap[cap_n++] = b;
+        }
         if (cur.len < MON_FRAME_MAX) {
             cur.d[cur.len] = b;
         }
@@ -76,6 +79,21 @@ void SerialMonitor::poll()
         bytes_rx++;
         last_byte_us = micros();
     }
+}
+
+void SerialMonitor::capture(bool on)
+{
+    cap_on = on;
+    if (on) {
+        cap_n = 0;
+    }
+}
+
+size_t SerialMonitor::captured(uint8_t *buf, size_t max)
+{
+    size_t n = cap_n < max ? cap_n : max;
+    memcpy(buf, cap, n);
+    return n;
 }
 
 void SerialMonitor::send(const uint8_t *d, size_t n)

@@ -127,7 +127,7 @@ Der S3 bekommt eine eigene Webseite, sie muss sein. Sie ersetzt auch das HDMI-Di
 - ESP32-S3 mit 16 MB Flash und 8 MB PSRAM, COM-Port und nativem USB.
 - Ein CMT2300A mit Antenne für beide HMS.
 - CH348 (oder 4 × SC16IS752), die vorhandenen Isolatoren für die 7 VE.Direct-Kanäle.
-- VE.Bus und die beiden JK-BMS-Packs (RS485): je MAX13487-Modul, ADuM1201-Modul (ADuM1201AR) und B0505S-1W, also dreimal. Keine DE-Leitung, der MAX13487 schaltet die Richtung selbst.
+- VE.Bus und die beiden JK-BMS-Packs (RS485): je RS485-Modul mit MS2548, ADuM1201-Modul (ADuM1201AR) und B0505S-1W, also dreimal. Keine DE-Leitung, der MS2548 schaltet die Richtung selbst.
 - SC16IS752 (CJMCU-752) für die beiden RS485 zu den Packs.
 - JK-BMS (CAN): TJA1050-Modul, ADuM1201-Modul (ADuM1201AR) und B0505S-1W.
 - Die Bestückung an den Relais-Pins (GPIO 11 und 12) mache ich anders, sie steht nicht im Lochraster-Plan.

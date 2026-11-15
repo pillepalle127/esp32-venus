@@ -16,6 +16,9 @@ public:
     uint32_t burst_until = 0;
     uint8_t burst_value = 0;
     void json(String &out);
+    // Kreuztest: empfangene Bytes zusaetzlich mitschreiben
+    void capture(bool on);
+    size_t captured(uint8_t *buf, size_t max);
 
     uint32_t baud = 0;
     uint32_t bytes_rx = 0, bytes_tx = 0, frames = 0;
@@ -37,6 +40,9 @@ private:
     Frame cur;
     uint32_t last_byte_us = 0;
     uint32_t gap_us = 0;
+    bool cap_on = false;
+    uint8_t cap[64];
+    size_t cap_n = 0;
 };
 
 #define CAN_IDS 48

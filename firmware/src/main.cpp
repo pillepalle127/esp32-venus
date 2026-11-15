@@ -24,6 +24,7 @@
 #include "pins.h"
 #include "radio.h"
 #include "sc16.h"
+#include "sysinfo.h"
 
 // Zugangsdaten stehen nicht im Code: wifi_secrets.h.example kopieren und anpassen.
 #if __has_include("wifi_secrets.h")
@@ -463,6 +464,7 @@ static void net_task(void *)
     while (true) {
         mqtt.loop();
         wifi_watch();
+        sys_firmware_check(WiFi.status() == WL_CONNECTED);
         web_loop();
         size_t n;
         while ((n = Serial2.read(buf, sizeof(buf))) > 0) {
@@ -525,7 +527,7 @@ static void start_task(void *)
 
     start_can();
     start_radio();
-    sc16_begin();
+    sc16_begin(CORE_OTHER);
 
     // Auch ohne Zugangsdaten noetig: Der MQTT-Broker braucht den TCP/IP-Stack.
     WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
@@ -571,9 +573,13 @@ static void start_task(void *)
 void setup()
 {
     Serial.begin(115200);
+    // Zeitzone vor dem ersten Log: Nach einem Neustart laeuft die Uhr weiter
+    setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
+    tzset();
     log_init();
     logf("esp32-venus Testfirmware, %s, Chip %s, PSRAM %u Bytes, Flash %u Bytes", BUILD,
          ESP.getChipModel(), ESP.getPsramSize(), ESP.getFlashChipSize());
+    sys_boot_report();
     settings_load();
 
     // setup() laeuft auf Core 1. Hier startet deshalb nur VE.Bus, damit sein

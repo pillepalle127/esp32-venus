@@ -8,18 +8,20 @@ Ich prüfe jede Strecke einzeln, bevor der S3 an die Anlage kommt. Werkzeug ist 
 
 ## Anstehend (Stand 15.11.2026)
 
-In dieser Reihenfolge empfohlen:
+Nach Wichtigkeit für das Ziel, Venus zu ersetzen:
 
 | Nr. | Test | Wo | Braucht vorher |
 |---|---|---|---|
-| 1 | A9 Rest: Download-Modus mit dem CMT2300A an GPIO 46 (SCLK), flashen über COM | Tisch | nichts |
-| 2 | A10 Relais-Pins: low/high auf der Seite, Relais schaltet | Tisch | Relaistreiber aufgebaut |
-| 3 | A6c RS485 über Kreuz, alle drei Ketten, 115200 und 9600 Baud | Tisch | Firmware: UART des SC16IS752 senden und empfangen (fehlt noch) |
-| 4 | B3 CAN am JK-BMS, nur hören | Anlage | Absprache, 120 Ω am Modul entfernt |
+| 1 | A6c RS485 über Kreuz, alle drei Ketten. Einziger Nachweis des Sendewegs zum MultiPlus. | Tisch | die drei ADuM1201 gewendet, dann Firmware mit VE.Bus RX GPIO 4 und TX GPIO 5 aufspielen |
+| 2 | B4 VE.Bus am MultiPlus, nur hören | Anlage | Absprache, Bedingungen in der Tabelle unten |
+| 3 | B3 CAN am JK-BMS, nur hören | Anlage | Absprache, 120 Ω am Modul entfernt |
+| 4 | B5 VE.Direct, die übrigen MPPT und der SmartShunt | Anlage | Absprache |
 | 5 | B7 Regelung WP-HMS | Anlage | Absprache, MT681 WP an ESP_venus, OpenDTU WP aus |
 | 6 | B6 JK-BMS über RS485, Zellspannungen beider Packs | Anlage | Absprache, A6c, Firmware: JK-Protokoll (fehlt noch) |
-| 7 | B5 VE.Direct, die übrigen MPPT und der SmartShunt | Anlage | Absprache |
-| 8 | B4 VE.Bus am MultiPlus, nur hören | Anlage | Absprache, Bedingungen in der Tabelle unten |
+| 7 | A9 Rest: Download-Modus mit dem CMT2300A an GPIO 46 (SCLK), flashen über COM | Tisch | nichts |
+| 8 | A10 Relais-Pins: low/high auf der Seite, Relais schaltet | Tisch | Relaistreiber aufgebaut |
+
+Zu lösen, bevor ESP_venus die MPPT übernimmt: Der CH348 meldet sich nach einem Neustart von ESP_venus erst nach Aus/Ein seiner eigenen 5 V wieder (A8). Jedes Firmware-Update startet ESP_venus neu.
 
 B3 vor B7, weil die Regelung den SoC über CAN liest. Ohne SoC gelten die Spannungsschwellen 53/48 V. A1 kommt mit der endgültigen Versorgung.
 
@@ -36,14 +38,14 @@ B3 vor B7, weil die Regelung den SoC über CAN liest. Ohne SoC gelten die Spannu
 Für jeden Kanal mit B0505S (VE.Bus, CAN, später RS485 rechts):
 - Durchgang zwischen GND des S3 und der Busmasse (G auf der Busseite des ADuM): **offen**.
 - Isolationsmessung, nur wenn ein Messgerät dafür da ist: alle Pins einer Seite verbunden gegen alle Pins der anderen, **250 V DC**. **In Ordnung:** mehrere MΩ oder mehr, ein Wert im kΩ-Bereich heißt, irgendwo besteht eine Verbindung. Keine Prüfung mit kV, siehe README.
-- +Vo gegen 0V am B0505S bei wenig Last: **4,75–5,25 V**. Den Bereich nennt das Datenblatt des MAX13487, beim TJA1050 gehe ich vom selben aus. Liegt die Spannung darüber: Lastwiderstand, siehe README.
+- +Vo gegen 0V am B0505S bei wenig Last: **4,75–5,25 V**. Der MS2548 verträgt laut Datenblatt 4,5–5,5 V, den engeren Bereich nehme ich für den TJA1050. Liegt die Spannung darüber: Lastwiderstand, siehe README.
 
 ### A3 TX-Pegel bei Reset und Flashen
 
-Der ADuM1201 hat am Eingang keinen Pull-up oder Pull-down (Datenblatt: ±10 µA, typisch 0,01 µA). Ist der TX-Pin des S3 offen, ist auch der Ausgang des ADuM unbestimmt. Dann sendet der MAX13487 auf VE.Bus, oder der TJA1050 zieht den CAN-Bus dominant.
+Der ADuM1201 hat am Eingang keinen Pull-up oder Pull-down (Datenblatt: ±10 µA, typisch 0,01 µA). Ist der TX-Pin des S3 offen, ist auch der Ausgang des ADuM unbestimmt. Dann sendet das RS485-Modul auf VE.Bus, oder der TJA1050 zieht den CAN-Bus dominant.
 
 Messen gegen GND des S3:
-- VE.Bus: ADuM-Pin **A1** (GPIO 4)
+- VE.Bus: ADuM-Pin **B1** (GPIO 5, seit 15.11.2026 der TX)
 - CAN: ADuM-Pin **B1** (GPIO 14)
 
 Die beiden RS485 zu den Packs brauchen das nicht: Ihren TX treibt der SC16IS752, sein RESET hängt nicht am S3.
@@ -104,9 +106,9 @@ Am Bus hängt nichts außer dem Prüfgerät, kein MultiPlus.
 Zwei Kanäle direkt verbinden: A an A, B an B, Busmasse an Busmasse. Dann sendet ein Kanal und der andere empfängt. So prüfe ich jede Kette in beide Richtungen, ohne USB-Adapter und ohne Anlage. Die Masseverbindung überbrückt die Trennung der beiden Busseiten nur für diesen Test.
 
 1. Linker Kanal: Reiter VE.Bus / RS485 auf **RS485-Test**, **115200** Baud. Der S3 startet neu.
-2. Beide rechten Kanäle auf **115200** Baud.
+2. Beide rechten Kanäle im Reiter RS485 Packs auf **115200** Baud.
 3. Drei Paare nacheinander verbinden: links mit Pack 1, links mit Pack 2, Pack 1 mit Pack 2.
-4. Je Paar in beide Richtungen `55 AA 01 02` senden und beim anderen Kanal als RX ablesen.
+4. Je Paar im Reiter RS485 Packs den Knopf **Kreuztest** drücken. Jeder Kanal sendet `55 AA 3x C3` (x: 0 links, 1 Pack 1, 2 Pack 2), die Tabelle zeigt, was jeder andere Kanal empfangen hat. Beim Sender selbst steht, ob das RS485-Modul das eigene Senden zurückgibt.
 5. Dasselbe mit **9600** Baud.
 6. **In Ordnung:** In allen 6 Richtungen und bei beiden Baudraten kommt die Folge unverändert an, ohne zusätzliche Bytes.
 7. Danach die Verbindungen lösen und den linken Kanal zurück auf **VE.Bus, nur hören** stellen.
@@ -138,7 +140,7 @@ Voraussetzung: A1 bis A3 erledigt. Ablauf und Anschlussart stehen in [PLAN.md, P
 | B1 MT681 Haus | parallel zum Tasmota | regelmäßig Telegramme, CRC-Fehler 0, Bezug wie beim Tasmota | Tasmota verliert Werte |
 | B2 MT681 WP | parallel zu DTUoB_WP, berührt dessen Regelung | wie B1, dazu Rahmenfehler 0 | DTUoB_WP verliert Werte |
 | B3 CAN am JK-BMS | A3 für GPIO 14 high, 120 Ω am Modul entfernt (der Bus hat schon zwei) | rund 27 Telegramme pro Sekunde, 21 IDs, Werte wie in Venus, Busfehler 0 | Fehlerzähler steigen, Venus meldet das BMS als weg |
-| B4 VE.Bus am MultiPlus | TX-Leitung nicht angeschlossen, Bus über 100 kΩ gemessen, Lötbrücke 120_S offen, Aufdruck `MAX13487EESA` | Sync „empfangen“, Prüfsummenfehler bleiben bei 0, DC-Strom und Temperatur plausibel | Venus oder MultiPlus melden VE.Bus-Fehler |
+| B4 VE.Bus am MultiPlus | TX-Leitung nicht angeschlossen, Bus über 100 kΩ gemessen, Lötbrücke 120_S offen. Das Modul hat einen MS2548 statt MAX13487: Umschaltung bei 256000 Baud und Last von Pull-up und Pull-down am Bus vorher klären. | Sync „empfangen“, Prüfsummenfehler bleiben bei 0, DC-Strom und Temperatur plausibel | Venus oder MultiPlus melden VE.Bus-Fehler |
 | B5 VE.Direct | parallel an den Isolator-Ausgängen, FT4232 bleibt dran | Seriennummer erkannt, Instanz aus `devices.h`, Prüfsummen ohne Fehler, Werte wie in Venus | ein MPPT meldet Fehler #67 |
 | B7 Regelung WP-HMS | Absprache. OpenDTU WP aus, sonst regeln zwei. MT681 WP probehalber an ESP_venus (GPIO 6). Regelung im Reiter DTU einschalten. | WP-Zähler bleibt um 25 W Bezug, neues Limit nur bei mehr als 3 W Abweichung, unter 66 W Bedarf schaltet der HMS ab und danach wieder ein | der Zähler zeigt dauerhaft Einspeisung, der HMS folgt den Limits nicht, die Batterie fällt unter die Stoppschwelle, ohne dass er abschaltet |
 | B6 JK-BMS über RS485, Pack 1 und 2 | A6b und A6c erledigt. Die Abfrage sendet an das BMS (nur lesend), vorher absprechen. Nicht am selben Anschluss wie die OpenDTU WP, zwei Abfragende auf einem Bus stören sich. | je Pack alle Zellspannungen wie in der JK-App, Abfragen ohne Prüfsummenfehler | das BMS meldet Fehler, die OpenDTU WP verliert die Batteriedaten |
@@ -149,12 +151,12 @@ Voraussetzung: A1 bis A3 erledigt. Ablauf und Anschlussart stehen in [PLAN.md, P
 |---|---|---|---|
 | A1 Versorgung | 14.11.2026 | offen | Über USB am Laptop: mit dem alten Kabel Unterspannung, mit einem anderen nicht. Im Betrieb wird die Versorgung anders gelöst. |
 | A2 Isolierte Busseiten | 14.11.2026 | in Ordnung | Durchgang S3-Masse zu Busmasse offen. |
-| A3 TX-Pegel | 14.11.2026 | in Ordnung | ADuM A1 (GPIO 4) und B1 (GPIO 14) bei gedrücktem RST, im Download-Modus und im Betrieb immer über 3 V. |
+| A3 TX-Pegel | 14.11.2026 | in Ordnung | ADuM A1 (GPIO 4) und B1 (GPIO 14) bei gedrücktem RST, im Download-Modus und im Betrieb immer über 3 V. Seit 15.11. sendet VE.Bus über GPIO 5 auf ADuM-Pin B1, dort neu messen. |
 | A4 I²C und BME280 | 14.11.2026 | in Ordnung | SDA und SCL waren anders verdrahtet als geplant, übernommen: SDA 16, SCL 15. 0x76 außen, 0x77 der zweite Sensor, Lesefehler 0. |
 | A5 MT681-Eingänge | 14.11.2026 | entfällt | Gleich am echten Zähler geprüft, siehe B1 und B2. |
 | A6 Linke RS485-Kette | 14.11.2026 | teilweise | Pinprüfung in Ordnung: TX (GPIO 4) offen, RX (GPIO 5) vom ADuM high getrieben. Gesendet 15 Bytes, kein Echo. Ob das Modul sein Senden zurückgibt, ist offen. Sendeweg: A gegen B beim 10-s-Dauersenden messen. |
 | A6b SC16IS752 am SPI | 15.11.2026 | in Ordnung | Scratchpad beider Kanäle 8 von 8 richtig, Gegenprobe Kanalwahl A `5A`, B `A5` richtig, Line-Status bei beiden `60`, Line-Control `1D`. |
-| A6c RS485 über Kreuz | | | |
+| A6c RS485 über Kreuz | 15.11.2026 | fehlerhaft | Pack 1 mit Pack 2 verbunden (A, B, Busmasse): bei 115200 und 9600 Baud in keine Richtung etwas empfangen, kein Kanal gibt sein Senden zurück. Interne Schleife des SC16IS752 bei beiden UARTs und beiden Baudraten in Ordnung, Fehlerzähler 0. Der Fehler liegt also zwischen SC16IS752 und Bus. Ursache: TXD am RS485-Modul ist der Ausgang (MS2548 Pin 1, am Oszilloskop: unser Sendesignal kam an Pin 1 an), im Plan war es umgekehrt. ADuM gewendet, nach dem Umbau wiederholen. |
 | A7 CAN-Kette | 14.11.2026 | in Ordnung | 10 gesendet, 10 richtig zurück, TX-Fehlerzähler 0, Busfehler 0. Zuerst fehlgeschlagen: Die Pins waren noch nicht verdrahtet, danach TX und RX vertauscht. Übernommen wie verdrahtet: TX 14, RX 13. Der Selbsttest liest jetzt vorher beide Pins und sendet nur, wenn RX getrieben und TX offen ist. |
 | A8 CH348 | 14.11.2026 | mit Einschränkung | Version `8A 88 80 00`, 8 Ports mit 19200 Baud. Nach einem Neustart des S3 meldet er sich nur, wenn er selbst kurz ohne Strom war. |
 | A9 CMT2300A | 15.11.2026 | in Ordnung | Beide HMS antworten, siehe [tests.md](tests.md). Download-Modus mit SCLK auf GPIO 46 noch nicht geprüft. |

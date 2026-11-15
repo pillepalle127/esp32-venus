@@ -5,10 +5,13 @@
 // Frei: GPIO 1, 10, 17, 18, 21, 39, 40, 47.
 #pragma once
 
-// ADuM1201 neben den S3-Pins, GPIO 4 und 5 laufen gerade hinueber, siehe docs/layout_lochraster.md
-#define VEBUS_RX    5
-#define VEBUS_TX    4
-#define VEBUS_DE    -1      // MAX13487 schaltet die Richtung selbst
+// ADuM1201 neben den S3-Pins, gewendet (Seite 1 zum S3), GPIO 4 und 5 laufen gerade hinueber:
+// GPIO 4 an A0 (Ausgang des ADuM, Empfang), GPIO 5 an B1 (Eingang des ADuM, Senden).
+// Seit 15.11.2026 so: TXD am RS485-Modul ist der Ausgang des Empfaengers (MS2548 Pin 1),
+// siehe docs/layout_lochraster.md
+#define VEBUS_RX    4
+#define VEBUS_TX    5
+#define VEBUS_DE    -1      // MS2548 schaltet die Richtung selbst
 
 // Beide Zaehler am selben Pfostenstecker: GND, 3V3, Haus, WP
 // So verdrahtet (14.11.2026): Haus an GPIO 7, WP an GPIO 6
@@ -40,7 +43,7 @@
 #define CAN_RX      13
 
 // JK-BMS ueber RS485, nur Zellspannungen: SC16IS752 (CJMCU-752) per SPI, Pack 1 an UART B,
-// Pack 2 an UART A (kuerzere Wege im Plan), dahinter je ADuM1201, B0505S und MAX13487. Die SPI-Pins liegen in denselben
+// Pack 2 an UART A (kuerzere Wege im Plan), dahinter je ADuM1201, B0505S und RS485-Modul (MS2548). Die SPI-Pins liegen in denselben
 // Reihen wie die Pins des Moduls, die Draehte gehen gerade hinueber. UART0 bleibt Konsole.
 #define SC16_CS     2
 #define SC16_MOSI   42      // SI

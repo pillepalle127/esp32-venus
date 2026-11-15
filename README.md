@@ -51,7 +51,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 
 | Funktion | Signal | GPIO | Anschluss |
 |---|---|---|---|
-| VE.Bus, UART1, 256000 Baud | RX / TX | 5 / 4 | MAX13487, über ADuM1201 und B0505S isoliert |
+| VE.Bus, UART1, 256000 Baud | RX / TX | 4 / 5 | RS485-Modul (MS2548), über ADuM1201 und B0505S isoliert |
 | MT681 Haus, UART2, 9600 Baud | RX | 7 | Pfostenstecker MT681: GND, 3V3, Haus, WP |
 | MT681 Wärmepumpe, RMT, 9600 Baud | RX | 6 | Pfostenstecker MT681 |
 | Kellerlüftung, I²C | SDA / SCL | 16 / 15 | die beiden BME280 (0x76 außen, 0x77), je ein Pfostenstecker: GND, 3V3, SDA, SCL |
@@ -59,7 +59,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 | Kellerlüftung | Lüfter | 11 | Relais |
 | Reserve | Relais 2 | 12 | Relais |
 | JK-BMS, TWAI, 500 kbit/s | TX / RX | 14 / 13 | TJA1050, über ADuM1201 und B0505S isoliert |
-| JK-BMS, RS485 je Pack, SC16IS752 per SPI | CS, SI, SO, SCLK | 2, 42, 41, 38 | CJMCU-752 mit Quarz 1,8432 MHz (höchstens 115200 Baud), UART A und B je über ADuM1201, B0505S und MAX13487 isoliert, nur für die Zellspannungen |
+| JK-BMS, RS485 je Pack, SC16IS752 per SPI | CS, SI, SO, SCLK | 2, 42, 41, 38 | CJMCU-752 mit Quarz 1,8432 MHz (höchstens 115200 Baud), UART A und B je über ADuM1201, B0505S und RS485-Modul (MS2548) isoliert, nur für die Zellspannungen |
 | RGB-LED des Boards | WS2812 | 48 | über die Lötbrücke „RGB“, Farbverlauf in 15 s |
 | Reserve | | 1, 10, 17, 18, 21, 39, 40, 47 | Das E-Paper entfällt vorerst, für eins würden die Pins reichen. |
 | Flashen, UART0 beim Start | TX / RX | 43 / 44 | COM-Buchse auf dem Board |
@@ -87,10 +87,11 @@ Lochraster-Plan: [docs/layout_lochraster.drawio](docs/layout_lochraster.drawio),
 
 - Die BMS schalten im Minus-Zweig. Hängt der S3 ohne Trennung an zwei Stellen, überbrückt seine Masse einen offenen BMS-Schalter. Ich trenne deshalb VE.Bus, CAN und RS485, jeweils an TX und RX, mit ADuM1201 und einem eigenen B0505S-1W je Busseite. GND bleibt am Bus.
 - Das ist eine Funktionstrennung gegen rund 60 V, kein Schutz vor Netzspannung. Prüfungen mit kV schaden: Der ADuM1201 ist für 2500 V rms über 1 Minute ausgelegt (Datenblatt, Tabelle 10). Es reicht der Durchgangstest.
-- Der ADuM1201 hängt auf der S3-Seite an 3,3 V, auf der Busseite an den 5 V des B0505S. Kanal A läuft von Seite 2 nach Seite 1, Kanal B umgekehrt. Auf dem Modul heißt die Ziffer 1 Eingang und 0 Ausgang: TX vom S3 geht auf A1 oder B1, RX kommt von A0 oder B0. Bei CAN zeigt Seite 1 zum S3, bei VE.Bus und den beiden RS485 zu den Packs Seite 2, damit die Drähte zum MAX13487 kreuzungsfrei laufen. Die ADuM1201 der beiden Packs hängen unter der Platine, mit den Bauteilen zur Platine. Von oben gesehen liegt Seite 1 zum MAX13487 als U1, A0, B1, G1: VCC, TXD, RXD und GND gehen gerade hinüber. Pack 1 hängt an UART B, Pack 2 an UART A: So liegen die Wege ineinander, und es kreuzen sich nur TX und RX je Pack einmal. Jedes Pack hat seine eigene Trennung, eine gemeinsame würde ihre Massen über den SC16IS752 verbinden.
-- Der B0505S ist ungeregelt. Der MAX13487 braucht laut Datenblatt 4,75–5,25 V, der TJA1050 nach meiner Erinnerung ebenso. Ist die Spannung bei wenig Last zu hoch, hilft ein Lastwiderstand: 250 Ω sind 10 % Last.
+- Der ADuM1201 hängt auf der S3-Seite an 3,3 V, auf der Busseite an den 5 V des B0505S. Kanal A läuft von Seite 2 nach Seite 1, Kanal B umgekehrt. Auf dem Modul heißt die Ziffer 1 Eingang und 0 Ausgang. Bei CAN zeigt Seite 1 zum S3. Bei VE.Bus und den beiden Packs zeigt Seite 2 zum RS485-Modul, U2, A1, B0 und G2 liegen in den Reihen von VCC, TXD, RXD und GND und gehen gerade hinüber. Dafür sind diese drei ADuM gewendet, ihre Bauteilseite zeigt andersherum als bisher. TXD des Moduls (sein Ausgang) geht auf A1, A0 an den RX des S3 bzw. SC16IS752. Der TX kommt auf B1, B0 geht an RXD des Moduls (sein Eingang). Pack 1 hängt an UART B, Pack 2 an UART A, die Wege liegen ineinander, ohne Kreuzung. Jedes Pack hat seine eigene Trennung, eine gemeinsame würde ihre Massen über den SC16IS752 verbinden.
+- Der B0505S ist ungeregelt. Der MS2548 braucht laut Datenblatt 4,5–5,5 V, der TJA1050 nach meiner Erinnerung 4,75–5,25 V. Ist die Spannung bei wenig Last zu hoch, hilft ein Lastwiderstand: 250 Ω sind 10 % Last.
 - Der ADuM1201AR reicht für CAN: rund 0,8 µs Laufzeit im schlechtesten Fall, der S3 tastet nach 1,6 µs ab. Der Selbsttest am Tisch lief fehlerfrei.
-- **MAX13487 (VE.Bus, RS485):** schaltet die Richtung selbst, DE entfällt. `ve.bus-library` ist laut Doku damit am MultiPlus getestet. Der Aufdruck muss `MAX13487EESA` sein. Vor dem Anschluss an VE.Bus: A gegen B ohne 120-Ω-Abschluss, Lötbrücke 120_S offen.
+- **RS485-Module (VE.Bus und Packs):** Auf den Modulen sitzt ein MS2548 von Ruimeng, kein MAX13487 (Aufdruck abgelesen am 15.11.2026). Belegung laut Datenblatt: Pin 1 R (Ausgang des Empfängers), 2 RE, 3 SHDN, 4 D (Eingang des Treibers), 5 GND, 6 A, 7 B, 8 VCC. Der Modul-Pin TXD geht an Pin 1, mit dem Oszilloskop gemessen: TXD ist der Ausgang des Moduls, RXD sein Eingang. Bis zum 15.11. war es im Plan umgekehrt gezeichnet, deshalb kam auf keinem RS485 etwas an.
+- Der MS2548 schaltet die Richtung selbst: D low treibt den Bus low, D high treibt kurz high und gibt dann frei. Den Ruhezustand halten Pull-up an A und Pull-down an B, die er laut Datenblatt braucht. `ve.bus-library` ist nur mit dem MAX13487 am MultiPlus getestet. Vor dem Anschluss an VE.Bus: A gegen B ohne 120-Ω-Abschluss, Lötbrücke 120_S offen.
 - **TJA1050 (CAN):** ohne Quarz, der S3 hat TWAI. Das Modul bringt einen 120-Ω-Abschluss mit, auf dem Bus sind nur zwei erlaubt.
 - Fertige isolierte Module wie das XY-S485 nicht an VE.Bus. Am JK-BMS möglich, wenn GND der TTL-Seite gegen GND an den Klemmen offen ist.
 - Die Relaistreiber stehen nicht im Lochraster-Plan: Die echte Platine ist kleiner als der Plan, trotz doppelstöckiger Bestückung ist dort kein Platz. Schaltung unter [Relaistreiber](#relaistreiber).
@@ -241,6 +242,7 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 - Die DVCC- und ESS-Einstellungen, die der S3 übernehmen muss.
 - Einzelzellen: DTUoB_WP (192.168.1.30, `OpenDTU-WP-0DB714`) liest per RS485 nur ein Pack, laut ioBroker am 14.11.2026 Adresse 1, 15 Zellen, 220 Ah. CAN meldet 440 Ah und 2 Module. Deshalb bekommt jedes Pack einen eigenen RS485 am SC16IS752. Laut esphome-jk-bms ist je Modbus-Bus nur ein Master erlaubt, und ein BMS mit Adresse 0 ist selbst Master.
 - Baudrate am RS485 des JK-BMS.
+- MS2548 an VE.Bus: ob er bei 256000 Baud schnell genug umschaltet und wie stark Pull-up und Pull-down des Moduls den Bus belasten. Laut esp32ess muss VE.Bus über 100 kΩ bleiben.
 - GND am CAN- und RS485-Port des JK-BMS gegen B− messen, dazu VE.Bus Pin 3 gegen DC− des MP2. Ist ein Port schon getrennt, entfällt dort die Trennung.
 - Der CH348 nach einem Neustart des S3: weiter beobachten.
 
@@ -271,7 +273,8 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 - [ESPHome: USB Host](https://esphome.io/components/usb_host/)
 - [tbnobody/OpenDTU](https://github.com/tbnobody/OpenDTU)
 - [ESP32-S3 Datenblatt](https://documentation.espressif.com/esp32-s3_datasheet_en.pdf)
-- [MAX13487E/MAX13488E Datenblatt](https://www.analog.com/media/en/technical-documentation/data-sheets/max13487e-max13488e.pdf)
+- [MS2548 Datenblatt (Ruimeng, chinesisch)](https://www.ftelectronic.com/Public/Upload/news/20231228/658d3c0d6c997.pdf)
+- [MS2548 bei LCSC](https://www.lcsc.com/product-detail/C42415856.html)
 - [ADuM1200/ADuM1201 Datenblatt](https://www.analog.com/media/en/technical-documentation/data-sheets/adum1200_1201.pdf)
 - [AO3402 Datenblatt (AOS)](https://www.aosmd.com/sites/default/files/res/datasheets/AO3402.pdf)
 

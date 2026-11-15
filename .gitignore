@@ -8,3 +8,4 @@ managed_components/
 __pycache__/
 firmware/src/wifi_secrets.h
 firmware/src/inverters.h
+firmware/elf/

@@ -155,6 +155,25 @@ Ergebnisse:
 - Pakete mit Länge 0 beim Mithören: Der Chip meldet Präambel, Sync und „Paket fertig“, aber kein CRC_OK, der FIFO ist leer. Er verwirft also Pakete mit falscher CRC. Auf 863,25 MHz, wo die OpenDTU Garage sendete, kamen in 60 s 32 gültige Anfragen und 88 solche Pakete, auf 865,00 MHz ohne fremde DTU keines. Am wahrscheinlichsten sind es schwach empfangene Pakete der OpenDTU Garage. Die Seite zeigt sie als „CRC-Fehler im Chip“.
 - Antenne bei allen Tests: eine 2,4-GHz-WLAN-Antenne.
 
+## Betrieb nur über WLAN (15.11.2026)
+
+ESP_venus hängt im Keller, eine COM-Verbindung gibt es nicht dauerhaft. Deshalb:
+
+- Neue Firmware gilt erst, wenn sie 60 s mit WLAN läuft. Startet ESP_venus vorher neu, stürzt ab oder findet 5 min kein WLAN, startet der Bootloader die vorherige. Arduino erklärt neue Firmware sonst gleich beim Start für gültig, das schaltet `verifyRollbackLater()` ab.
+- Das Log liegt in einem Speicherbereich, den der Start nicht löscht (`.noinit`). Es übersteht Neustart, Absturz und Watchdog, nach Stromausfall ist es leer. Zeitstempel mit Datum, vor dem Stellen der Uhr die Laufzeit. Abrufbar als Text unter `/log.txt`.
+- Nach einem Absturz stehen Task, PC und Backtrace im Log, der Coredump liegt im Flash und ist unter `/coredump.elf` abrufbar. `firmware/ota.sh` legt zu jedem Build die ELF-Datei unter `firmware/elf/` ab, benannt nach den ersten 16 Stellen ihrer SHA-256. Die Firmware meldet dieselbe Kennung. Mit `xtensa-esp-elf-addr2line` aus der PlatformIO-Toolchain wird der Backtrace lesbar.
+- Seite System: Zustand der Firmware, vorherige Firmware, Knopf „vorherige Firmware starten“, Absturz herunterladen und löschen.
+
+Am Gerät geprüft:
+- Bestätigung: neue Firmware nach 64 s „bestätigt“.
+- Rückfall: neue Firmware eingespielt, nach 6 s neu gestartet. Danach lief wieder die vorherige, im Log „Rückfall: … lief nicht an“. Das Log der abgebrochenen Firmware war noch da.
+- Log nach Neustart mit derselben Firmware erhalten.
+- Absturztest (`/api/crash_test?wirklich=1`): Neustartgrund „Absturz“, die Zeile vor dem Absturz im Log, Task `net` mit PC und Backtrace, Coredump 32228 Bytes. `addr2line` mit der abgelegten ELF-Datei zeigt genau die auslösende Zeile.
+- Im Flash lag vorher schon ein Absturz in Task `wifi` aus einem älteren Build. Dessen ELF-Datei fehlt, er ließ sich nicht entschlüsseln und ist vom Test überschrieben.
+- `esp_app_get_elf_sha256()` liefert nur 9 Stellen. Die Firmware liest die Kennung deshalb aus der App-Beschreibung. Datum und Zeit dort stammen aus der vorgefertigten Bibliothek, nicht vom Build.
+
+Weiter in den Keller muss ich nur noch für den CH348 nach einem Neustart (siehe Testplan) und für Änderungen an Bootloader oder Partitionstabelle.
+
 Am PC getestet, bevor die Firmware aufs Board ging:
 - SML: ein Telegramm mit 1.8.0, 2.8.0 und 16.7.0, Mehrbyte-Längenfeld, Müll davor. Werte richtig, verfälschte CRC wird verworfen.
 - RMT-Empfang: Der Decoder tastet wie ein UART in Bitmitte ab, synchronisiert auf jede Startflanke. Fehlerfrei, solange Baudabweichung über ein Zeichen, Flankenverzögerung und Zittern zusammen unter einer halben Bitzeit bleiben (52 µs). Bei exakter Baudrate sind das zum Beispiel ±10 µs Zittern plus 20 µs Verzögerung der steigenden Flanke. Wie gut der Lesekopf das einhält, zeigen die Rahmenfehler am echten Zähler.

@@ -11,8 +11,8 @@ Board: ESP32-S3-WROOM-1 N16R8. Pinbelegung wie in `firmware/src/pins.h`. Jede Ze
   3V3-Schiene ---------------| 3V3       GND |--------------- GND-Schiene
   CMT2300A ------------------| 3V3    TX  43 |  frei
                              | RST    RX  44 |  frei
-┌ ADuM, MAX13487  -- TX -----|  4          1 |  frei
-└ VE.Bus          -- RX -----|  5          2 |----- CS ----┐ SC16IS752,
+┌ ADuM, RS485     -- RX -----|  4          1 |  frei
+└ VE.Bus          -- TX -----|  5          2 |----- CS ----┐ SC16IS752,
 ┌ Stecker MT681   -- WP -----|  6         42 |----- SI ----┤ Drähte gerade
 └                 -- Haus ---|  7         41 |----- SO ----┤ hinüber
 ┌ Stecker BME280  -- SCL ----| 15         40 |  frei       │
@@ -53,29 +53,29 @@ Nach Bereichen:
 
 | Seite | Oben | Mitte | Unten |
 |---|---|---|---|
-| Links | MAX13487 VE.Bus außen, daneben ADuM VE.Bus und Pfostenstecker | B0505S VE.Bus | CAN |
-| Rechts | SC16IS752 (CJMCU-752) | MAX13487 Pack 1 waagerecht, ragt über den Rand | MAX13487 Pack 2 waagerecht, ragt über den Rand |
+| Links | RS485-Modul VE.Bus außen, daneben ADuM VE.Bus und Pfostenstecker | B0505S VE.Bus | CAN |
+| Rechts | SC16IS752 (CJMCU-752) | RS485-Modul Pack 1 waagerecht, ragt über den Rand | RS485-Modul Pack 2 waagerecht, ragt über den Rand |
 
-Die Klemmen des MAX13487 für VE.Bus zeigen zur Oberkante, die der beiden Module für die Packs nach rechts über den Rand. Der CAN-Stecker liegt an der Unterkante.
+Die Klemmen des RS485-Moduls für VE.Bus zeigen zur Oberkante, die der beiden Module für die Packs nach rechts über den Rand. Der CAN-Stecker liegt an der Unterkante.
 
 Rechts, die beiden RS485 zu den Packs:
 - Der SC16IS752 sitzt oben rechts, wo vorher die Stiftleiste des E-Paper war. Seine Einzelreihe (VCC bis SDA/VSS) liegt in den Reihen von GPIO 43 bis 37, CS, SI, SO und SCLK gehen gerade hinüber zu GPIO 2, 42, 41 und 38. I2C/SPI und SDA/VSS liegen an GND (SPI-Modus), RESET an 3V3, IRQ bleibt frei. Die Beschriftung steht auf der Unterseite des Moduls: Von oben gesehen liegt die Einzelreihe links, TXA bis CTSB in der Doppelreihe ganz rechts.
-- Darunter die beiden MAX13487-Module waagerecht übereinander, Pins links, Klemmen rechts über den Rand.
-- Der ADuM1201 jedes Packs hängt unter der Platine unter seinem Modul, mit den Bauteilen zur Platine. Seite 1 zeigt zum MAX13487, Seite 2 zum SC16IS752, wie beim ADuM für VE.Bus. Von oben gesehen liegt Seite 1 als U1, A0, B1, G1 in den Reihen von VCC, TXD, RXD und GND: Alle vier gehen gerade hinüber, ohne Kreuzung. Kanal A läuft vom SC16IS752 (A1) zum TXD (A0), Kanal B vom RXD (B1) zum SC16IS752 (B0).
+- Darunter die beiden RS485-Module waagerecht übereinander, Pins links, Klemmen rechts über den Rand.
+- Der ADuM1201 jedes Packs hängt unter der Platine unter seinem Modul, gewendet: Bauteile nach unten. Seite 2 zeigt zum RS485-Modul, Seite 1 zum SC16IS752, wie beim ADuM für VE.Bus. Von oben gesehen liegt Seite 2 als U2, A1, B0, G2 in den Reihen von VCC, TXD, RXD und GND: Alle vier gehen gerade hinüber, ohne Kreuzung. Kanal A läuft vom TXD des Moduls (A1) zum RX des SC16IS752 (A0), Kanal B vom TX des SC16IS752 (B1) zum RXD des Moduls (B0).
 - Der B0505S jedes Packs steht links neben seinem Modul.
 - Jedes Pack hat seine eigene Trennung. Eine gemeinsame würde die Massen beider Packs über den SC16IS752 verbinden.
-- Pack 1 hängt an UART B, Pack 2 an UART A. So liegen die Wege ganz rechts ineinander, und es kreuzen sich nur TX und RX je Pack einmal. Mit A für Pack 1 wären es sechs Kreuzungen. Gefädelt geht beides.
+- Pack 1 hängt an UART B, Pack 2 an UART A. So liegen die Wege ganz rechts ineinander, ohne Kreuzung.
 
-Der ADuM1201 für VE.Bus sitzt oben neben den S3-Pins, oberhalb der Pfostenstecker. GPIO 4 und 5 laufen gerade hinüber. Die vier Drähte zum MAX13487 laufen unter dem Modul und kreuzen sich nicht:
+Der ADuM1201 für VE.Bus sitzt oben neben den S3-Pins, oberhalb der Pfostenstecker, gewendet: Bauteile zur Platine. GPIO 4 und 5 laufen gerade hinüber. Die vier Drähte zum RS485-Modul laufen unter dem Modul und kreuzen sich nicht:
 
-| S3-Seite | Busseite | MAX13487 |
+| S3-Seite | Busseite | RS485-Modul |
 |---|---|---|
-| U2 an 3V3 | U1 | VCC |
-| A1 an GPIO 4 (TX) | A0 | TXD |
-| B0 an GPIO 5 (RX) | B1 | RXD |
-| G2 an GND | G1 | GND |
+| U1 an 3V3 | U2 | VCC |
+| A0 an GPIO 4 (RX) | A1 | TXD, Ausgang des Moduls |
+| B1 an GPIO 5 (TX) | B0 | RXD, Eingang des Moduls |
+| G1 an GND | G2 | GND |
 
-Das setzt voraus, dass TXD zum IC-Pin 4 (DI) geht und RXD zum Pin 1 (RO). Ist es umgekehrt, tausche ich die beiden Drähte an TXD und RXD.
+TXD am Modul ist der Ausgang des Empfängers (MS2548 Pin 1, gemessen am 15.11.2026), RXD geht an den Eingang des Treibers (Pin 4). Bis zum 15.11. war es hier umgekehrt gezeichnet.
 
 Beim ADuM1201 läuft Kanal A von Seite 2 nach Seite 1, Kanal B umgekehrt (Datenblatt, Tabelle 16). Auf dem Modul heißt die Ziffer 1 Eingang und 0 Ausgang:
 

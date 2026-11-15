@@ -76,8 +76,32 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
 </section>
 
 <section id="s-packs">
+ <div class="card"><h2>Kreuztest RS485 (Testplan A6c)</h2>
+  <p class="note">Sendet auf allen beteiligten Kanälen. Nur ohne JK-BMS und ohne MultiPlus an den Kanälen.</p>
+  <p>Zwei Kanäle verbinden: A an A, B an B, Busmasse an Busmasse. Der linke Kanal muss im Reiter VE.Bus / RS485 auf „RS485-Test“ stehen, alle mit derselben Baudrate.</p>
+  <p><button class="btn r" onclick="if(confirm2(this))cross()">Kreuztest</button> <span id="crossres"></span></p>
+  <div class="wrap"><table id="crosstab" class="mono"></table></div>
+  <p class="dim">Jeder Kanal sendet 55 AA 3x C3 (x: 0 links, 1 Pack 1, 2 Pack 2), alle anderen hören 80 ms mit. Beim Sender selbst zeigt die Zeile, ob das RS485-Modul das eigene Senden zurückgibt.</p></div>
+ <div class="card"><h2>Pack 1 (UART B)</h2>
+  <p><select id="pBbaud"><option>115200</option><option>57600</option><option>38400</option><option>19200</option><option>9600</option><option>4800</option><option>2400</option></select>
+   <button class="btn g" onclick="api('pack?ch=B&baud='+$('pBbaud').value).then(r=>{if(r&&r.err)alertx(r.err);t()})">Baudrate übernehmen</button></p>
+  <p><input id="pBtxd" size="40" placeholder="Hex, z. B. 55 AA 01 02"> <label><input type="checkbox" id="pBtxt"> als Text</label>
+   <button class="btn r" onclick="packSend('B')">senden</button></p>
+  <p><button class="btn r" onclick="if(confirm2(this))api('pack_burst?ch=B&b=00').then(t)">10 s Dauersenden 0x00</button>
+   <button class="btn r" onclick="if(confirm2(this))api('pack_burst?ch=B&b=55').then(t)">10 s Dauersenden 0x55</button></p>
+  <div class="wrap"><table id="pBstat"></table><table id="pBlist" class="mono"></table></div></div>
+ <div class="card"><h2>Pack 2 (UART A)</h2>
+  <p><select id="pAbaud"><option>115200</option><option>57600</option><option>38400</option><option>19200</option><option>9600</option><option>4800</option><option>2400</option></select>
+   <button class="btn g" onclick="api('pack?ch=A&baud='+$('pAbaud').value).then(r=>{if(r&&r.err)alertx(r.err);t()})">Baudrate übernehmen</button></p>
+  <p><input id="pAtxd" size="40" placeholder="Hex, z. B. 55 AA 01 02"> <label><input type="checkbox" id="pAtxt"> als Text</label>
+   <button class="btn r" onclick="packSend('A')">senden</button></p>
+  <p><button class="btn r" onclick="if(confirm2(this))api('pack_burst?ch=A&b=00').then(t)">10 s Dauersenden 0x00</button>
+   <button class="btn r" onclick="if(confirm2(this))api('pack_burst?ch=A&b=55').then(t)">10 s Dauersenden 0x55</button></p>
+  <div class="wrap"><table id="pAstat"></table><table id="pAlist" class="mono"></table></div></div>
+
  <div class="card"><h2>SC16IS752 (CS 2, SI 42, SO 41, SCLK 38, Quarz 1,8432 MHz)</h2>
   <p><button class="btn" onclick="sc16test()">SPI prüfen</button> <span id="sc16res"></span></p>
+  <p><button class="btn" onclick="packLoop()">interne Schleife</button> <span id="loopres"></span></p>
   <div class="wrap"><table id="sc16tab" class="mono"></table></div>
   <p class="dim">Schreibt 55, AA, 00, FF in das Scratchpad-Register beider Kanäle und liest jeden Wert zurück. Gegenprobe Kanalwahl: A bekommt 5A, B bekommt A5, erst danach werden beide gelesen. Line-Status nach dem Start: 60 (Sendepuffer leer). Pack 1 hängt an UART B, Pack 2 an UART A.</p></div>
 </section>
@@ -113,14 +137,16 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
 </section>
 
 <section id="s-log">
- <div class="card"><h2>Konsole</h2><pre id="log"></pre></div>
+ <div class="card"><h2>Konsole <a class="btn g" href="/log.txt" target="_blank">als Text</a></h2><pre id="log"></pre>
+  <p class="dim">Das Log übersteht Neustart, Absturz und Watchdog, nach Stromausfall ist es leer. Zeitstempel mit Datum, vor dem Stellen der Uhr Laufzeit seit dem Start (+hh:mm:ss).</p></div>
 </section>
 
 <section id="s-sys">
  <div class="card"><h2>System</h2><table id="sys"></table></div>
  <div class="card"><h2>Firmware-Update über WLAN</h2>
   <p><input type="file" id="fw" accept=".bin"> <button class="btn" onclick="upload()">hochladen</button> <span id="upres"></span></p>
-  <p class="dim">firmware.bin aus .pio/build/s3/. Danach startet der S3 neu.</p></div>
+  <p class="dim">firmware.bin aus .pio/build/s3/. Danach startet ESP_venus neu. Die neue Firmware gilt erst, wenn sie 60 s mit WLAN läuft. Startet ESP_venus vorher neu, stürzt ab oder findet 5 min kein WLAN, startet der Bootloader wieder die vorherige.</p></div>
+ <div class="card"><h2>Notfall</h2><p id="sysbtn"></p></div>
  <div class="card"><button class="btn r" onclick="if(confirm2(this))api('restart')">Neustart</button></div>
 </section>
 </main>
@@ -180,6 +206,9 @@ function render(){const s=S;if(!s)return;const y=s.sys;
   ['Temperatur',f(v.temp,1,'°C')],['Lade-Status 0x80',v.st80],['LED an / blinkt',v.led+' / '+v.blink],['Eingangsstrom Grenze akt / min / max',f(v.ilim,1,'A')+' / '+f(v.imin,1,'A')+' / '+f(v.imax,1,'A')]])}
  if(s.rs){const q=s.rs;rows('rsstat',[['Pinprüfung beim Start',esc(q.pins)],['Senden',q.txok?'<span class="ok">frei</span>':'<span class="bad">gesperrt</span> (erwartet: TX offen, RX high getrieben)'],['Empfangen / gesendet',q.rx+' / '+q.tx+' Bytes'],['Rahmen',q.frames]]);
   head('rs',['Zeit','','Länge','Hex','Text'],q.list.map(x=>[age(y.up*1000-x.ms),x.tx?'<span class="warn">TX</span>':'RX',x.len,hex(x.d)+(x.len>96?' …':''),esc(ascii(x.d))]))}
+ if(s.sc16&&s.sc16.ok)for(const c of s.sc16.ch){const id='p'+c.name;if(document.activeElement!=$(id+'baud'))$(id+'baud').value=c.baud;
+  rows(id+'stat',[['Baudrate',c.baud],['Empfangen / gesendet',c.rx+' / '+c.tx+' Bytes'],['Rahmen',c.frames],['Fehler Überlauf / Parität / Rahmen / Break',c.ovr+' / '+c.par+' / '+c.frm+' / '+c.brk]]);
+  head(id+'list',['Zeit','','Länge','Hex','Text'],c.list.map(x=>[age(y.up*1000-x.ms),x.tx?'<span class="warn">TX</span>':'RX',x.len,hex(x.d)+(x.len>96?' …':''),esc(ascii(x.d))]))}
  const R=s.cmt,mhz=c=>(860+c*0.25).toFixed(2)+' MHz',bar=v=>'<span style="display:inline-block;height:8px;width:'+Math.max(1,Math.min(110,v+130))+'px;background:var(--acc)"></span>';
  if(!R.ok){rows('rst',[['Chip','<span class="bad">nicht gefunden</span>']]);head('rpeers',[],[]);head('rch',[],[]);head('rpk',[],[]);head('rinv',[],[]);$('dresume').innerHTML='';rows('dst',[['Chip','<span class="bad">nicht gefunden</span>']])}else{
  rows('rst',[['Chip','<span class="ok">gefunden</span>'],['Versorgung am Chip (LBD)',f(R.vdd,2,'V')],['Betrieb',R.mode=='scan'?'Kanalscan, gerade '+mhz(R.ch)+', '+R.passes+' Durchgänge fertig':R.mode=='dtu'?'<span class="warn">DTU, sendet</span> auf '+mhz(R.dtu_ch)+', '+R.pa+' dBm, Seriennummer '+R.dtu:'hört auf '+mhz(R.ch)],
@@ -214,7 +243,7 @@ function render(){const s=S;if(!s)return;const y=s.sys;
   return[i,p.dev||(x.PID?'PID '+x.PID:'–'),x['SER#']||'–',x.V!=null?f(x.V/1000,2,'V'):'–',x.I!=null?f(x.I/1000,2,'A'):'–',
    x.PPV!=null?f(x.PPV,0,'W')+' ('+f(x.VPV/1000,1,'V')+')':x.P!=null?f(x.P,0,'W'):'–',x.CS!=null?(CS[x.CS]||x.CS)+(x.ERR&&x.ERR!='0'?' <span class="bad">ERR '+x.ERR+'</span>':''):x.SOC!=null?f(x.SOC/10,1,'%'):'–',
    p.ok+' / '+p.bad,p.age>=0?age(p.age):'–',p.bytes]}));
- rows('sys',[['Firmware',y.build],['Laufzeit',age(y.up*1000)],['Neustartgrund',y.reset],['WLAN',y.ip?y.ssid+', '+y.ip+', '+y.rssi+' dBm':'getrennt'],['MAC',y.mac],
+ rows('sys',[['Firmware',y.build+' · '+y.part+', '+esc(y.fwstate)+' · ELF '+y.elf],['vorherige Firmware',y.other?esc(y.other):'–'],['Absturz im Flash',y.coredump?'<span class="bad">ja</span>':'nein'],['Laufzeit',age(y.up*1000)],['Neustartgrund',y.reset],['WLAN',y.ip?y.ssid+', '+y.ip+', '+y.rssi+' dBm':'getrennt'],['MAC',y.mac],
   ['Heap intern frei / min',Math.round(y.heap/1024)+' / '+Math.round(y.heapmin/1024)+' KB'],['PSRAM frei',Math.round(y.psram/1024)+' KB']]);
 }
 async function t(){const s=await api('status');if(s){S=s;render()}else $('st').textContent='keine Verbindung'}
@@ -224,6 +253,13 @@ async function scan(){$('scanres').textContent='scanne …';const r=await api('i
 async function setMode(btn){if(!confirm2(btn))return;await api('mode?m='+$('lsel').value+'&baud='+$('lbaud').value);$('st').textContent='startet neu …'}
 async function send(){const v=$('txd').value;const r=await api('send?'+($('txtext').checked?'text=':'hex=')+encodeURIComponent(v));if(r&&r.err)alertx(r.err);t()}
 function alertx(m){$('st').textContent=m}
+async function packLoop(){$('loopres').textContent='läuft …';const r=await api('pack_loop');$('loopres').innerHTML=r?r.map(c=>c.pack+' (UART '+c.name+', '+c.baud+' Baud): '+(c.ok?'<span class="ok">in Ordnung</span>':'<span class="bad">gesendet '+hex(c.sent)+', zurück '+(c.got?hex(c.got):'nichts')+'</span>')).join(' · '):'Fehler'}
+async function packSend(ch){const v=$('p'+ch+'txd').value;const r=await api('pack?ch='+ch+'&'+($('p'+ch+'txt').checked?'text=':'hex=')+encodeURIComponent(v));if(r&&r.err)alertx(r.err);t()}
+async function cross(){$('crossres').textContent='läuft …';const r=await api('rs485_cross');if(!r){$('crossres').textContent='Fehler';return}
+ const bs=r.baud.filter(b=>b>0),same=bs.every(b=>b==bs[0]);
+ $('crossres').innerHTML=(r.left?'':'<span class="warn">linker Kanal nicht im RS485-Test, nimmt nicht teil</span> ')+(same?'':'<span class="bad">Baudraten verschieden: '+r.baud.join(' / ')+'</span>');
+ const rows=[];for(const x of r.res)for(const y of x.to)rows.push([esc(x.from),esc(y.name)+(y.self?' (Echo)':''),hex(x.sent),y.got?hex(y.got):'–',y.self?(y.got?'Echo':'kein Echo'):(y.ok?'<span class="ok">richtig</span>':y.got?'<span class="bad">falsch</span>':'nichts')]);
+ head('crosstab',['sendet','empfängt','gesendet','empfangen','Ergebnis'],rows)}
 async function sc16test(){$('sc16res').textContent='prüfe …';const r=await api('sc16_test');if(!r){$('sc16res').textContent='Fehler';return}
  const h2=v=>v.toString(16).toUpperCase().padStart(2,'0');
  $('sc16res').innerHTML=(r.good==r.total&&r.ch.every(c=>c.lsr==0x60)?'<span class="ok">in Ordnung</span>':'<span class="bad">fehlerhaft</span>')+': '+r.good+' von '+r.total+' Werten richtig zurück';
@@ -241,6 +277,8 @@ async function cantest(){$('cantestres').textContent='läuft …';const r=await 
 async function upload(){const fl=$('fw').files[0];if(!fl)return;$('upres').textContent='lade hoch …';const fd=new FormData();fd.append('fw',fl);
  try{const r=await fetch('/update',{method:'POST',body:fd});$('upres').textContent=await r.text()}catch(e){$('upres').textContent='Fehler: '+e}}
 for(const id of['rfreq','dfreq'])for(let c=12;c<=40;c++){const o=document.createElement('option');o.value=c;o.textContent=(860+c*0.25).toFixed(2)+' MHz';if(c==20)o.selected=true;$(id).appendChild(o)}
-t();logt();setInterval(t,2000);setInterval(logt,1500);
+function sysbtn(){const y=S&&S.sys;if(!y)return;$('sysbtn').innerHTML=(y.other?'<button class="btn r" onclick="if(confirm2(this))api(\'boot_other\').then(r=>alertx(r&&r.ok?\'startet vorherige Firmware …\':\'Fehler: \'+(r?r.msg:\'\')))">vorherige Firmware starten</button> ':'')+
+ (y.coredump?'<a class="btn g" href="/coredump.elf">Absturz herunterladen</a> <button class="btn g" onclick="if(confirm2(this))api(\'coredump_erase\').then(t)">Absturz löschen</button>':'<span class="dim">kein Absturz gespeichert</span>')}
+t();logt();setInterval(t,2000);setInterval(sysbtn,2000);setInterval(logt,1500);
 </script></body></html>
 )HTML";
