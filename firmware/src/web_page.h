@@ -75,6 +75,13 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
  <div class="card"><h2>CH348 / VE.Direct (nur empfangen, 19200 Baud)</h2><div class="wrap"><table id="chst"></table><table id="ved"></table></div></div>
 </section>
 
+<section id="s-packs">
+ <div class="card"><h2>SC16IS752 (CS 2, SI 42, SO 41, SCLK 38, Quarz 1,8432 MHz)</h2>
+  <p><button class="btn" onclick="sc16test()">SPI prüfen</button> <span id="sc16res"></span></p>
+  <div class="wrap"><table id="sc16tab" class="mono"></table></div>
+  <p class="dim">Schreibt 55, AA, 00, FF in das Scratchpad-Register beider Kanäle und liest jeden Wert zurück. Gegenprobe Kanalwahl: A bekommt 5A, B bekommt A5, erst danach werden beide gelesen. Line-Status nach dem Start: 60 (Sendepuffer leer). Pack 1 hängt an UART B, Pack 2 an UART A.</p></div>
+</section>
+
 <section id="s-radio">
  <div class="card"><h2>CMT2300A (CSB 8, SDIO 3, SCLK 46, FCSB 9)</h2><table id="rst"></table>
   <p><select id="rfreq"></select> <button class="btn" onclick="api('radio?ch='+$('rfreq').value).then(t)">mithören</button>
@@ -118,7 +125,7 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
 </section>
 </main>
 <script>
-const tabs=[['home','Übersicht'],['i2c','I²C'],['mt','Zähler'],['can','CAN'],['left','VE.Bus / RS485'],['ved','VE.Direct'],['radio','Funk'],['dtu','DTU'],['log','Konsole'],['sys','System']];
+const tabs=[['home','Übersicht'],['i2c','I²C'],['mt','Zähler'],['can','CAN'],['left','VE.Bus / RS485'],['ved','VE.Direct'],['packs','RS485 Packs'],['radio','Funk'],['dtu','DTU'],['log','Konsole'],['sys','System']];
 const $=id=>document.getElementById(id);
 let cur='home',S=null,logFrom=0;
 function show(t){cur=t;for(const[k]of tabs){$('s-'+k).classList.toggle('on',k==t);$('b-'+k).classList.toggle('on',k==t)}try{localStorage.tab=t}catch(e){}}
@@ -217,6 +224,11 @@ async function scan(){$('scanres').textContent='scanne …';const r=await api('i
 async function setMode(btn){if(!confirm2(btn))return;await api('mode?m='+$('lsel').value+'&baud='+$('lbaud').value);$('st').textContent='startet neu …'}
 async function send(){const v=$('txd').value;const r=await api('send?'+($('txtext').checked?'text=':'hex=')+encodeURIComponent(v));if(r&&r.err)alertx(r.err);t()}
 function alertx(m){$('st').textContent=m}
+async function sc16test(){$('sc16res').textContent='prüfe …';const r=await api('sc16_test');if(!r){$('sc16res').textContent='Fehler';return}
+ const h2=v=>v.toString(16).toUpperCase().padStart(2,'0');
+ $('sc16res').innerHTML=(r.good==r.total&&r.ch.every(c=>c.lsr==0x60)?'<span class="ok">in Ordnung</span>':'<span class="bad">fehlerhaft</span>')+': '+r.good+' von '+r.total+' Werten richtig zurück';
+ head('sc16tab',['Kanal','Scratchpad geschrieben → gelesen','Kanalwahl','Line-Status','Line-Control'],r.ch.map((c,i)=>{const w=i?0xA5:0x5A,g=r.cross[i];return[c.name+(c.name=='A'?' (Pack 2)':' (Pack 1)'),c.spr.map(p=>h2(p[0])+'→'+(p[0]==p[1]?h2(p[1]):'<span class="bad">'+h2(p[1])+'</span>')).join('  '),
+  h2(w)+'→'+(g==w?h2(g):'<span class="bad">'+h2(g)+'</span>'),c.lsr==0x60?h2(c.lsr):'<span class="bad">'+h2(c.lsr)+'</span>',h2(c.lcr)]}))}
 async function devPoll(id,on){const r=await api('dev?id='+id+'&poll='+on);if(r&&r.err)alertx(r.err);setTimeout(t,300)}
 function devEdit(id){const d=S.cmt.devs.find(v=>v.id==id);if(!d)return;$('fid').value=d.serial||d.id;$('fname').value=d.name;$('fiv').value=d.serial?d.iv:'';$('fres').textContent='';$('fname').focus()}
 function devNew(id){show('dtu');$('fid').value=id;$('fname').value='';$('fiv').value='';$('fres').textContent='';$('fname').focus()}

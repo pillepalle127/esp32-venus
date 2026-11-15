@@ -28,6 +28,10 @@ Der ADuM1201 hat am Eingang keinen Pull-up oder Pull-down (Datenblatt: ±10 µA,
 Messen gegen GND des S3:
 - VE.Bus: ADuM-Pin **A1** (GPIO 4)
 - CAN: ADuM-Pin **B1** (GPIO 14)
+- RS485 Pack 1: ADuM-Pin **A1** am ADuM für Pack 1 (TXB des SC16IS752)
+- RS485 Pack 2: ADuM-Pin **A1** am ADuM für Pack 2 (TXA des SC16IS752)
+
+Rechts treibt der SC16IS752 den Pin, nicht der S3. Nach seinem eigenen Reset sollte er high sein. Gemessen wird trotzdem in allen drei Zuständen.
 
 Jeweils in drei Zuständen (RST zieht EN des S3 auf low):
 1. **RST gedrückt halten** und dabei messen.
@@ -72,13 +76,27 @@ Am Bus hängt nichts außer dem Prüfgerät, kein MultiPlus.
 - Reiter CAN → **Selbsttest starten**. Der S3 schaltet kurz auf „ohne Quittung“, sendet 10 Telegramme und liest jedes über TJA1050 und ADuM zurück, danach hört er wieder nur zu. Das prüft die Kette in beide Richtungen, auch die Laufzeit durch den ADuM. Er sendet dabei auf CAN, also nur ohne BMS am Bus, mit dem 120-Ω-Widerstand des Moduls.
 - **In Ordnung:** 10 gesendet, 10 richtig zurück, TX-Fehlerzähler 0.
 
-### A6b Rechte RS485-Ketten (SC16IS752, Pack 1 und 2)
+### A6b SC16IS752 am SPI (CS GPIO 2, SI 42, SO 41, SCLK 38)
 
-**Die Firmware dafür fehlt noch:** Treiber für den SC16IS752 und ein RS485-Test je Kanal auf der Seite.
-- SPI: Die Firmware schreibt und liest das Scratchpad-Register des SC16IS752. In Ordnung, wenn der geschriebene Wert zurückkommt.
-- Pack 1 hängt an UART B, Pack 2 an UART A.
-- Je Kanal wie A6: Echo, Dauersenden mit Messung zwischen A und B oder ein USB-RS485-Adapter. Am Bus hängt dabei nichts.
-- Dafür brauche ich die Frequenz des Quarzes auf dem CJMCU-752.
+**Die Firmware dafür fehlt noch:** Treiber für den SC16IS752 und ein Reiter für die beiden rechten Kanäle. Pack 1 hängt an UART B, Pack 2 an UART A.
+
+1. **Quarz:** 1,8432 MHz (Aufdruck, 15.11.2026). Die Baudrate ist Quarz / (16 × Teiler), höchstens also 115200 Baud mit Teiler 1. 9600 Baud gehen mit Teiler 12, beide ohne Abweichung.
+2. **SPI prüfen** (Knopf im neuen Reiter): Die Firmware schreibt in das Scratchpad-Register beider Kanäle nacheinander `55`, `AA`, `00`, `FF` und liest jeden Wert zurück. Dazu liest sie das Line-Status-Register, nach dem Start `60` (Sendepuffer leer).
+3. **In Ordnung:** alle 8 Werte richtig zurück, bei beiden Kanälen `60`. Kommt immer `00` oder `FF`, prüfen: CS, SO und den Pin I2C/SPI (für SPI auf low).
+
+### A6c RS485 über Kreuz (alle drei Ketten)
+
+Zwei Kanäle direkt verbinden: A an A, B an B, Busmasse an Busmasse. Dann sendet ein Kanal und der andere empfängt. So prüfe ich jede Kette in beide Richtungen, ohne USB-Adapter und ohne Anlage. Die Masseverbindung überbrückt die Trennung der beiden Busseiten nur für diesen Test.
+
+1. Linker Kanal: Reiter VE.Bus / RS485 auf **RS485-Test**, **115200** Baud. Der S3 startet neu.
+2. Beide rechten Kanäle auf **115200** Baud.
+3. Drei Paare nacheinander verbinden: links mit Pack 1, links mit Pack 2, Pack 1 mit Pack 2.
+4. Je Paar in beide Richtungen `55 AA 01 02` senden und beim anderen Kanal als RX ablesen.
+5. Dasselbe mit **9600** Baud.
+6. **In Ordnung:** In allen 6 Richtungen und bei beiden Baudraten kommt die Folge unverändert an, ohne zusätzliche Bytes.
+7. Danach die Verbindungen lösen und den linken Kanal zurück auf **VE.Bus, nur hören** stellen.
+
+Der linke Kanal läuft über den UART des S3, seine Baudrate stimmt. Kommen bei links ↔ Pack falsche Bytes, aber bei Pack 1 ↔ Pack 2 richtige, ist die Quarzfrequenz falsch eingetragen. Beide rechten Kanäle laufen dann gleich falsch und verstehen sich trotzdem. Der Test ersetzt auch den offenen Teil von A6.
 
 ### A8 CH348
 
@@ -107,6 +125,7 @@ Voraussetzung: A1 bis A3 erledigt. Ablauf und Anschlussart stehen in [PLAN.md, P
 | B3 CAN am JK-BMS | A3 für GPIO 14 high, 120 Ω am Modul entfernt (der Bus hat schon zwei) | rund 27 Telegramme pro Sekunde, 21 IDs, Werte wie in Venus, Busfehler 0 | Fehlerzähler steigen, Venus meldet das BMS als weg |
 | B4 VE.Bus am MultiPlus | TX-Leitung nicht angeschlossen, Bus über 100 kΩ gemessen, Lötbrücke 120_S offen, Aufdruck `MAX13487EESA` | Sync „empfangen“, Prüfsummenfehler bleiben bei 0, DC-Strom und Temperatur plausibel | Venus oder MultiPlus melden VE.Bus-Fehler |
 | B5 VE.Direct | parallel an den Isolator-Ausgängen, FT4232 bleibt dran | Seriennummer erkannt, Instanz aus `devices.h`, Prüfsummen ohne Fehler, Werte wie in Venus | ein MPPT meldet Fehler #67 |
+| B6 JK-BMS über RS485, Pack 1 und 2 | A6b und A6c erledigt. Die Abfrage sendet an das BMS (nur lesend), vorher absprechen. Nicht am selben Anschluss wie die OpenDTU WP, zwei Abfragende auf einem Bus stören sich. | je Pack alle Zellspannungen wie in der JK-App, Abfragen ohne Prüfsummenfehler | das BMS meldet Fehler, die OpenDTU WP verliert die Batteriedaten |
 
 ## Ergebnisse
 
@@ -118,13 +137,15 @@ Voraussetzung: A1 bis A3 erledigt. Ablauf und Anschlussart stehen in [PLAN.md, P
 | A4 I²C und BME280 | 14.11.2026 | in Ordnung | SDA und SCL waren anders verdrahtet als geplant, übernommen: SDA 16, SCL 15. 0x76 außen, 0x77 der zweite Sensor, Lesefehler 0. |
 | A5 MT681-Eingänge | 14.11.2026 | entfällt | Gleich am echten Zähler geprüft, siehe B1 und B2. |
 | A6 Linke RS485-Kette | 14.11.2026 | teilweise | Pinprüfung in Ordnung: TX (GPIO 4) offen, RX (GPIO 5) vom ADuM high getrieben. Gesendet 15 Bytes, kein Echo. Ob das Modul sein Senden zurückgibt, ist offen. Sendeweg: A gegen B beim 10-s-Dauersenden messen. |
-| A6b Rechte RS485-Ketten | | | |
+| A6b SC16IS752 am SPI | 15.11.2026 | in Ordnung | Scratchpad beider Kanäle 8 von 8 richtig, Gegenprobe Kanalwahl A `5A`, B `A5` richtig, Line-Status bei beiden `60`, Line-Control `1D`. |
+| A6c RS485 über Kreuz | | | |
 | A7 CAN-Kette | 14.11.2026 | in Ordnung | 10 gesendet, 10 richtig zurück, TX-Fehlerzähler 0, Busfehler 0. Zuerst fehlgeschlagen: Die Pins waren noch nicht verdrahtet, danach TX und RX vertauscht. Übernommen wie verdrahtet: TX 14, RX 13. Der Selbsttest liest jetzt vorher beide Pins und sendet nur, wenn RX getrieben und TX offen ist. |
 | A8 CH348 | 14.11.2026 | mit Einschränkung | Version `8A 88 80 00`, 8 Ports mit 19200 Baud. Nach einem Neustart des S3 meldet er sich nur, wenn er selbst kurz ohne Strom war. |
-| A9 CMT2300A | | | |
+| A9 CMT2300A | 15.11.2026 | in Ordnung | Beide HMS antworten, siehe [tests.md](tests.md). Download-Modus mit SCLK auf GPIO 46 noch nicht geprüft. |
 | A10 Relais-Pins | | | |
 | B1 MT681 Haus | 14.11.2026 | in Ordnung | GPIO 7 (getauscht wie verdrahtet), 124 Telegramme in 124 s, 0 CRC-Fehler. Ob parallel zum Tasmota, habe ich nicht notiert. |
 | B2 MT681 WP | 14.11.2026 | in Ordnung | GPIO 6 per RMT, 34 Telegramme, 0 CRC-Fehler, 0 Rahmenfehler. |
 | B3 CAN am JK-BMS | | | |
 | B4 VE.Bus am MultiPlus | | | |
 | B5 VE.Direct | 14.11.2026 | ein MPPT in Ordnung | Port 0, `HQ2503KHTNV` = solarcharger 294, 27 Blöcke ohne Prüfsummenfehler. RX und TX waren zuerst gekreuzt. |
+| B6 JK-BMS über RS485 | | | |

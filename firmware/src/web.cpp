@@ -12,6 +12,7 @@
 #include "dpl.h"
 #include "log.h"
 #include "radio.h"
+#include "sc16.h"
 #include "util.h"
 #include "web_page.h"
 
@@ -467,6 +468,11 @@ void web_begin()
         server.send(200, "application/json", "{}");
     });
     server.on("/api/dev", HTTP_GET, handle_dev);
+    server.on("/api/sc16_test", HTTP_GET, []() {
+        String o;
+        sc16_selftest(o);
+        server.send(200, "application/json", o);
+    });
     server.on("/api/dpl", HTTP_GET, []() {
         if (server.hasArg("on")) {
             dpl_set_enabled(server.arg("on") == "1");

@@ -25,7 +25,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 | `battery.socketcan_can1` | 512 | JK-BMS | CAN |
 | `grid.ve_TM974E88` | 40 | Tasmota als VM-3P75CT | Modbus UDP 192.168.1.33 |
 | `pvinverter.http_34` | 34 | `henne49_dbus-opendtu` | HTTP |
-| `pvinverter.mqtt_pv_100` | 100 | MQTT PV | MQTT |
+| `pvinverter.mqtt_pv_100` | 100 | Growatt MIC, über `dbus-mqtt-pv` | MQTT |
 
 - DVCC ist aktiv.
 - Die seriellen Anschlüsse laufen heute über 2 × FT4232 am Pi, alle Kanäle mit Isolatoren.
@@ -59,7 +59,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 | Kellerlüftung | Lüfter | 11 | Relais |
 | Reserve | Relais 2 | 12 | Relais |
 | JK-BMS, TWAI, 500 kbit/s | TX / RX | 14 / 13 | TJA1050, über ADuM1201 und B0505S isoliert |
-| JK-BMS, RS485 je Pack, SC16IS752 per SPI | CS, SI, SO, SCLK | 2, 42, 41, 38 | CJMCU-752, UART A und B je über ADuM1201, B0505S und MAX13487 isoliert, nur für die Zellspannungen |
+| JK-BMS, RS485 je Pack, SC16IS752 per SPI | CS, SI, SO, SCLK | 2, 42, 41, 38 | CJMCU-752 mit Quarz 1,8432 MHz (höchstens 115200 Baud), UART A und B je über ADuM1201, B0505S und MAX13487 isoliert, nur für die Zellspannungen |
 | RGB-LED des Boards | WS2812 | 48 | über die Lötbrücke „RGB“, Farbverlauf in 15 s |
 | Reserve | | 1, 10, 17, 18, 21, 39, 40, 47 | Das E-Paper entfällt vorerst, für eins würden die Pins reichen. |
 | Flashen, UART0 beim Start | TX / RX | 43 / 44 | COM-Buchse auf dem Board |
@@ -93,7 +93,49 @@ Lochraster-Plan: [docs/layout_lochraster.drawio](docs/layout_lochraster.drawio),
 - **MAX13487 (VE.Bus, RS485):** schaltet die Richtung selbst, DE entfällt. `ve.bus-library` ist laut Doku damit am MultiPlus getestet. Der Aufdruck muss `MAX13487EESA` sein. Vor dem Anschluss an VE.Bus: A gegen B ohne 120-Ω-Abschluss, Lötbrücke 120_S offen.
 - **TJA1050 (CAN):** ohne Quarz, der S3 hat TWAI. Das Modul bringt einen 120-Ω-Abschluss mit, auf dem Bus sind nur zwei erlaubt.
 - Fertige isolierte Module wie das XY-S485 nicht an VE.Bus. Am JK-BMS möglich, wenn GND der TTL-Seite gegen GND an den Klemmen offen ist.
-- Die Bestückung an den Relais-Pins (GPIO 11 und 12) mache ich anders, sie steht nicht im Lochraster-Plan.
+- Die Relaistreiber stehen nicht im Lochraster-Plan: Die echte Platine ist kleiner als der Plan, trotz doppelstöckiger Bestückung ist dort kein Platz. Schaltung unter [Relaistreiber](#relaistreiber).
+
+## Relaistreiber
+
+Zwei 5-V-Relais von Finder, je mit einem AO3402, der die Spule nach GND schaltet. Festgelegt am 04.11.2026. GPIO high schaltet das Relais ein.
+
+| Relais | GPIO | In der Firmware |
+|---|---|---|
+| Lüfter, Kellerlüftung | 11 | `FAN_RELAY` |
+| Relais 2, Reserve | 12 | `RELAY2` |
+
+```
+                 +5V
+                  │
+          ┌───────┤
+          │       │
+   Diode  ▲     Spule
+ Kathode  │       │
+ an +5V   │       │
+          └───────┤
+                  │
+                  D
+GPIO ──┬── 100 Ω ─ G   AO3402
+       │          S
+     10 kΩ        │
+       │          │
+      GND        GND
+```
+
+| Teil | Wert | Wozu |
+|---|---|---|
+| Schalter | AO3402 von AOS, SOT-23 | Laut Datenblatt höchstens 85 mΩ bei 2,5 V Gate-Spannung, Schwelle höchstens 1,5 V. Der GPIO liefert 3,3 V. |
+| Gate-Widerstand | 100 Ω, GPIO zum Gate | begrenzt den Umladestrom des Gates |
+| Pull-down | 10 kΩ, Gate nach GND | hält das Relais aus, solange der GPIO beim Start nicht getrieben ist |
+| Freilaufdiode | 1N4007 oder 1N4148 parallel zur Spule, Kathode an +5 V | nimmt die Abschaltspitze der Spule auf |
+| Spule | an der 5-V-Schiene | ihr Strom kommt zur Last der 5-V-Einspeisung dazu |
+
+- Bei 100 mA Spulenstrom fallen am AO3402 rund 9 mV ab, die Wärme bleibt unter 1 mW. Er braucht keine Kühlfläche.
+- Andere Hersteller und eine ältere AOS-Fassung nennen bis zu 110 mΩ. Bei diesem Strom spielt das keine Rolle.
+- Hat der Finder-Sockel schon eine Schutzdiode, entfällt die externe. Dann + und − an der Spule richtig anschließen.
+- SOT-23 sitzt auf einem Adapter auf 2,54 mm. Belegung von oben laut Datenblatt: D allein oben, G links unten, S rechts unten.
+- Nicht genommen: 2N7000, MTD3055VL, BUK9225-55A und BUK9226-75A nennen ihren Widerstand erst ab 4,5–5 V Gate-Spannung, an 3,3 V ist er nicht garantiert. Der VN610SP ist ein High-Side-Schalter und braucht mindestens 5,5 V. Das Modul HW-532 (PC817 und MOSFET) gibt dem Gate nur die halbe Lastspannung, an 5 V also rund 2,5 V.
+- Firmware: Nach dem Start bleiben GPIO 11 und 12 Eingang, erst ein Knopf auf der Seite macht sie zum Ausgang. Test A10 im [Testplan](docs/testplan.md).
 
 ## DVCC
 
@@ -197,9 +239,8 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 ## Offen
 
 - Die DVCC- und ESS-Einstellungen, die der S3 übernehmen muss.
-- Wer `mqtt_pv_100` speist. In `README.md` von pv-prognose heißt es, Venus erfasse Growatt und HMS als PV-Wechselrichter. Die Zuordnung habe ich nicht geprüft.
+- `mqtt_pv_100` ist der Growatt MIC, laut Config (15.11.2026) eingebunden mit [venus-os_dbus-mqtt-pv](https://github.com/mr-manuel/venus-os_dbus-mqtt-pv): höchstens 1600 W, AC-Eingang 1, Topic `Growatt_fake/power` am Broker 192.168.1.4. Kommt 60 s nichts, beendet sich der Treiber. Das Topic schreibt das ioBroker-Skript `script.js.common.Photovoltaik` (Adapter `javascript.0`), mit `power`, `current` und `energy_forward`. Woher das Skript die Werte des Growatt hat, ist offen.
 - Einzelzellen: DTUoB_WP (192.168.1.30, `OpenDTU-WP-0DB714`) liest per RS485 nur ein Pack, laut ioBroker am 14.11.2026 Adresse 1, 15 Zellen, 220 Ah. CAN meldet 440 Ah und 2 Module. Deshalb bekommt jedes Pack einen eigenen RS485 am SC16IS752. Laut esphome-jk-bms ist je Modbus-Bus nur ein Master erlaubt, und ein BMS mit Adresse 0 ist selbst Master.
-- Quarzfrequenz des CJMCU-752, die Firmware braucht sie für die Baudraten.
 - Baudrate am RS485 des JK-BMS.
 - GND am CAN- und RS485-Port des JK-BMS gegen B− messen, dazu VE.Bus Pin 3 gegen DC− des MP2. Ist ein Port schon getrennt, entfällt dort die Trennung.
 - Der CH348 nach einem Neustart des S3: weiter beobachten.
@@ -233,6 +274,7 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 - [ESP32-S3 Datenblatt](https://documentation.espressif.com/esp32-s3_datasheet_en.pdf)
 - [MAX13487E/MAX13488E Datenblatt](https://www.analog.com/media/en/technical-documentation/data-sheets/max13487e-max13488e.pdf)
 - [ADuM1200/ADuM1201 Datenblatt](https://www.analog.com/media/en/technical-documentation/data-sheets/adum1200_1201.pdf)
+- [AO3402 Datenblatt (AOS)](https://www.aosmd.com/sites/default/files/res/datasheets/AO3402.pdf)
 
 ## Lizenz
 

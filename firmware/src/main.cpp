@@ -23,6 +23,7 @@
 #include "log.h"
 #include "pins.h"
 #include "radio.h"
+#include "sc16.h"
 
 // Zugangsdaten stehen nicht im Code: wifi_secrets.h.example kopieren und anpassen.
 #if __has_include("wifi_secrets.h")
@@ -524,6 +525,7 @@ static void start_task(void *)
 
     start_can();
     start_radio();
+    sc16_begin();
 
     // Auch ohne Zugangsdaten noetig: Der MQTT-Broker braucht den TCP/IP-Stack.
     WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {

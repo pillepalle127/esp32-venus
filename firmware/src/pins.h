@@ -46,6 +46,7 @@
 #define SC16_MOSI   42      // SI
 #define SC16_MISO   41      // SO
 #define SC16_SCK    38      // SCLK
+#define SC16_XTAL   1843200 // Quarz auf dem CJMCU-752, Aufdruck abgelesen am 15.11.2026
 
 // E-Paper: Stiftleiste im Plan entfallen. Frei sind noch GPIO 1, 10, 17, 18, 21, 39, 40, 47.
 
