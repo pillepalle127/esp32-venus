@@ -159,6 +159,25 @@ void CanMonitor::clear()
     xSemaphoreGive(mtx);
 }
 
+bool CanMonitor::get(uint32_t id, uint8_t *d, uint32_t &age_ms)
+{
+    if (mtx == nullptr) {
+        return false;
+    }
+    bool ok = false;
+    xSemaphoreTake(mtx, portMAX_DELAY);
+    for (uint8_t i = 0; i < n; i++) {
+        if (tab[i].id == id && !tab[i].ext) {
+            memcpy(d, tab[i].d, tab[i].dlc);
+            age_ms = millis() - tab[i].last_ms;
+            ok = true;
+            break;
+        }
+    }
+    xSemaphoreGive(mtx);
+    return ok;
+}
+
 void CanMonitor::json(String &out)
 {
     twai_status_info_t st = {};

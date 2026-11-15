@@ -47,6 +47,8 @@ public:
     void add(uint32_t id, bool ext, uint8_t dlc, const uint8_t *d);
     void clear();
     void json(String &out);
+    // Letzte Daten einer ID. false, wenn sie nie kam. age_ms: Alter
+    bool get(uint32_t id, uint8_t *d, uint32_t &age_ms);
 
     volatile uint32_t frames = 0;
 

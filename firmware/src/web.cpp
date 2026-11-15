@@ -9,6 +9,7 @@
 #include "app.h"
 #include "pins.h"
 #include "devices.h"
+#include "dpl.h"
 #include "log.h"
 #include "radio.h"
 #include "util.h"
@@ -153,6 +154,8 @@ static void handle_status()
     // CMT2300A
     o += ",\"cmt\":";
     radio.json(o);
+    o += ",\"dpl\":";
+    dpl_json(o);
 
     // CH348 und VE.Direct
     o += ",\"ch348\":{\"ok\":";
@@ -464,6 +467,13 @@ void web_begin()
         server.send(200, "application/json", "{}");
     });
     server.on("/api/dev", HTTP_GET, handle_dev);
+    server.on("/api/dpl", HTTP_GET, []() {
+        if (server.hasArg("on")) {
+            dpl_set_enabled(server.arg("on") == "1");
+            logf("Regelung: von der Seite %s", server.arg("on") == "1" ? "eingeschaltet" : "ausgeschaltet");
+        }
+        server.send(200, "application/json", "{}");
+    });
     server.on("/api/radio", HTTP_GET, []() {
         if (server.hasArg("ch")) {
             radio.listen((uint8_t)server.arg("ch").toInt());

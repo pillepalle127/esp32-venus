@@ -19,6 +19,7 @@
 #include <usb/usb_host.h>
 
 #include "app.h"
+#include "dpl.h"
 #include "log.h"
 #include "pins.h"
 #include "radio.h"
@@ -373,6 +374,7 @@ void can_selftest(String &out)
 static void start_radio()
 {
     SpiManagerInst.register_bus(SPI3_HOST);
+    dpl_begin();
     radio.begin(CMT_SDIO, CMT_SCLK, CMT_CSB, CMT_FCSB, CORE_OTHER);
     logf("CMT2300A: %s", radio.found ? "gefunden, hoere auf der DTU-Frequenz" : "nicht gefunden");
 }
@@ -558,7 +560,7 @@ static void start_task(void *)
     logf("WLAN: keine Zugangsdaten, src/wifi_secrets.h fehlt");
 #endif
     // Uhrzeit: Die Hoymiles-Bibliothek fragt Wechselrichter erst mit gestellter Uhr ab
-    configTzTime("CET-1CEST,M3.5.0,M10.5.0/3", "fritz.box", "pool.ntp.org");
+    configTzTime("CET-1CEST,M3.5.0,M10.5.0/3", "192.168.1.1", "pool.ntp.org");   // NTP wie in den OpenDTUs
 
     xTaskCreatePinnedToCore(net_task, "net", 8192, NULL, 1, &task_net, CORE_OTHER);
     vTaskDelete(NULL);

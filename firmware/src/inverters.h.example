@@ -7,3 +7,6 @@
 
 // Name und Seriennummer (hexadezimal, wie auf dem Typenschild)
 #define INVERTERS { {"HMS Beispiel", 0x116400000000ULL} }
+
+// Wechselrichter, den die Regelung fuehrt. Ohne diese Zeile gibt es keine Regelung.
+#define DPL_SERIAL 0x116400000000ULL

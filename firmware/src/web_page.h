@@ -89,16 +89,20 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
 <section id="s-dtu">
  <div class="card"><h2>Abfrage als DTU (sendet)</h2><table id="dst"></table>
   <p>DTU-Frequenz <select id="dfreq"></select> <button class="btn g" onclick="api('radio?dtu='+$('dfreq').value).then(t)">übernehmen</button>
-   Sendeleistung <select id="pa"><option>0</option><option>5</option><option>10</option><option>14</option><option>17</option><option>20</option></select> dBm
+   Sendeleistung <select id="pa"><option>-10</option><option>-5</option><option>0</option><option>5</option><option>10</option><option>14</option><option>17</option><option>20</option></select> dBm
    <button class="btn g" onclick="api('radio?pa='+$('pa').value).then(t)">übernehmen</button></p>
-  <p class="note">Sendet. Erreicht das Board einen Wechselrichter nicht, schickt es ihm auf 868.00 MHz den Befehl, auf die DTU-Frequenz zu wechseln. Nur einschalten, wenn keine andere DTU diesen Wechselrichter abfragt. Gelesen werden nur Messwerte, kein Limit, kein Ein/Aus. Die Einstellungen bleiben über einen Neustart erhalten.</p>
+  <p class="note">Sendet. Erreicht ESP_venus einen Wechselrichter nicht, schickt ESP_venus ihm auf 868.00 MHz den Befehl, auf die DTU-Frequenz zu wechseln. Nur einschalten, wenn keine andere DTU diesen Wechselrichter abfragt. Gelesen werden nur Messwerte, kein Limit, kein Ein/Aus. Die Einstellungen bleiben über einen Neustart erhalten.</p>
   <p id="dresume"></p></div>
+ <div class="card"><h2>Regelung WP-HMS (sendet Limits)</h2><table id="dpl"></table>
+  <p id="dplbtn"></p>
+  <p class="dim" id="dplcfg"></p>
+  <p class="note">Ein Limit ändert, was der WP-HMS aus der Batterie einspeist. Ohne frischen Zählerwert vom MT681 WP sendet die Regelung nichts.</p></div>
  <div class="card"><h2>Geräte</h2><div class="wrap"><table id="rinv"></table></div></div>
  <div class="card"><h2>Gerät anlegen oder ändern</h2>
   <p><input id="fid" size="14" placeholder="Seriennummer"> <input id="fname" size="20" maxlength="23" placeholder="Name">
    Abstand <input id="fiv" size="4" type="number" min="1" max="3600" placeholder="5"> s
    <button class="btn" onclick="devSave()">speichern</button> <button class="btn r" onclick="if(confirm2(this))devDel()">löschen</button> <span id="fres"></span></p>
-  <p class="dim">Seriennummer mit 12 Stellen vom Typenschild, nur damit kann das Board abfragen. Mit der Kennung (8 Stellen aus dem Funk) lässt sich ein Gerät nur benennen, etwa eine fremde DTU oder ein fremder Wechselrichter. Neue Geräte sind aus.</p></div>
+  <p class="dim">Seriennummer mit 12 Stellen vom Typenschild, nur damit kann ESP_venus abfragen. Mit der Kennung (8 Stellen aus dem Funk) lässt sich ein Gerät nur benennen, etwa eine fremde DTU oder ein fremder Wechselrichter. Neue Geräte sind aus.</p></div>
 </section>
 
 <section id="s-log">
@@ -175,6 +179,16 @@ function render(){const s=S;if(!s)return;const y=s.sys;
   ['Uhrzeit (für die Abfrage nötig)',yn(R.time,'gestellt','fehlt')],['Signal jetzt',R.rssi+' dBm'],
   ['Pakete gültig / CRC falsch',R.pkts+' / '+R.crc],['Empfang neu gestartet',R.restarts]]);
  rows('dst',[['Betrieb',R.mode=='dtu'?'<span class="warn">sendet</span> auf '+mhz(R.dtu_ch)+', '+R.pa+' dBm':'sendet nicht, '+(R.mode=='scan'?'Kanalscan':'hört auf '+mhz(R.ch))+(R.suspended?' (Abfrage unterbrochen)':'')],['DTU-Seriennummer',R.dtu],['Uhrzeit (für die Abfrage nötig)',yn(R.time,'gestellt','fehlt')]]);
+ const D=s.dpl;if(D){const ag=ms=>ms>=0?' ('+age(ms)+')':'';
+  rows('dpl',[['Zustand',(D.on?(D.state=='regelt'?'<span class="ok">regelt</span>':'<span class="warn">'+esc(D.state)+'</span>'):'aus')],
+   ['WP-Zähler (Bezug +)',D.meter!=null?f(D.meter,0,'W')+ag(D.meter_age):'<span class="bad">kein Wert</span>'],
+   ['HMS Leistung AC',f(D.pac,1,'W')+ag(D.inv_age)],['Batterie Spannung am HMS / korrigiert',f(D.udc,2,'V')+' / '+f(D.ucorr,2,'V')],
+   ['SoC (CAN)',D.soc!=null?f(D.soc,0,'%')+ag(D.soc_age):'–'],['Entladen erlaubt',yn(D.discharge)],['Nacht',D.night?'ja':'nein'],['HMS ausgeschaltet',D.standby?'ja':'nein'],
+   ['letztes Limit',D.limit!=null?f(D.limit,0,'W')+ag(D.limit_age)+(D.cmd==1?' · läuft':D.cmd==2?' · <span class="bad">Fehler</span>':''):'–'],
+   ['Befehle Limit / Ein-Aus / Neustart',D.limits+' / '+D.power_cmds+' / '+D.restarts]]);
+  $('dplbtn').innerHTML=D.avail?'<button class="btn'+(D.on?' r':'')+'" onclick="'+(D.on?'':'if(confirm2(this))')+'api(\'dpl?on='+(D.on?0:1)+'\').then(t)">Regelung '+(D.on?'aus':'ein')+'</button>':'<span class="bad">Kein geregelter Wechselrichter (DPL_SERIAL) in der Geräteliste</span>';
+  const c=D.cfg;$('dplcfg').textContent='Werte aus der Config der OpenDTU WP: Ziel '+c.target+' W ±'+c.hyst+' W am WP-Zähler, Limit '+c.lower+' bis '+c.upper+' W, Standby '+(c.standby?'erlaubt':'nein')+
+   ', Start/Stopp SoC '+c.soc_start+'/'+c.soc_stop+' %, ohne SoC Spannung '+c.v_start+'/'+c.v_stop+' V (korrigiert um '+c.corr+' V/W, Stoppspannung gilt immer), nachts immer Batterie: '+(c.night?'ja':'nein')+', täglicher Neustart des HMS: '+(c.restart>=0?c.restart+' Uhr':'aus')+'.'}
  $('dresume').innerHTML=R.suspended&&R.devs.some(v=>v.poll)?'<button class="btn r" onclick="api(\'radio?resume=1\').then(t)">Abfrage fortsetzen</button> Mithören oder Kanalscan hat die Abfrage unterbrochen.':'';
  if(document.activeElement!=$('dfreq'))$('dfreq').value=R.dtu_ch;if(document.activeElement!=$('pa'))$('pa').value=R.pa;
  head('rinv',['Name','Kennung','Seriennr.','Typ','Abfrage','Abstand','','erreichbar','Leistung AC','Spannung AC','Netz','Temperatur','Ertrag heute / gesamt','DC je Eingang','Signal','Anfragen / ok / Teil / keine / defekt','Daten'],R.devs.map(v=>[esc(v.name)||'–',v.id,v.serial||'–',v.serial?v.type||'<span class="bad">unbekannt</span>':'nur Name',
@@ -183,9 +197,11 @@ function render(){const s=S;if(!s)return;const y=s.sys;
   v.reach?'<span class="ok">ja</span>':'nein',f(v.pac,1,'W'),f(v.uac,1,'V'),f(v.f,2,'Hz'),f(v.t,1,'°C'),v.yd!=null?f(v.yd,0,'Wh')+' / '+f(v.yt,3,'kWh'):'–',
   v.dc?v.dc.map(d=>f(d[0],1,'W')+' ('+f(d[1],1,'V')+')').join(' · '):'–',v.ok||v.part?v.rssi+' dBm':'–',v.tx+' / '+v.ok+' / '+v.part+' / '+v.none+' / '+v.bad,v.age>=0?age(v.age):'–']));
  const nm=id=>{const d=R.devs.find(v=>v.id==id);return d&&d.name?esc(d.name)+' <span class="dim">'+id+'</span>':id+' <button class="btn g" onclick="devNew(\''+id+'\')">benennen</button>'};
- head('rpeers',['Wechselrichter','DTU','Frequenz','Anfragen','Signal DTU','Antworten','Signal WR','zuletzt'],R.peers.map(e=>[nm(e.inv)+(e.rsp?'':' <span class="warn">keine Antwort</span>'),e.dtu==R.dtu.slice(4)?'dieses Board':nm(e.dtu),mhz(e.ch),e.req,e.rreq?e.rreq+' dBm':'–',e.rsp,e.rrsp?e.rrsp+' dBm':'–',age(R.now-e.ms)]));
+ head('rpeers',['Wechselrichter','DTU','Frequenz','Anfragen','Signal DTU','Antworten','Signal WR','zuletzt'],R.peers.map(e=>[nm(e.inv)+(e.rsp?'':' <span class="warn">keine Antwort</span>'),e.dtu==R.dtu.slice(4)?'ESP_venus':nm(e.dtu),mhz(e.ch),e.req,e.rreq?e.rreq+' dBm':'–',e.rsp,e.rrsp?e.rrsp+' dBm':'–',age(R.now-e.ms)]));
  head('rch',['Frequenz','Mittel','Spitze','','Pakete'],R.chs.map(c=>[mhz(c.ch)+(c.ch==R.ch?' ◀':''),c.avg+' dBm',c.max+' dBm',bar(c.max),c.pkts||'']));
- head('rpk',['Zeit','','Frequenz','Signal','CRC','Länge','Hex'],R.list.map(p=>[age(R.now-p.ms),p.tx?'<span class="warn">TX</span>':'RX',mhz(p.ch),p.tx?'–':p.rssi+' dBm',p.crc?'ok':'<span class="bad">falsch</span>',p.d.length/2,hex(p.d)]))}
+ const FL=[[0x20,'PKT_ERR'],[0x10,'PREAM'],[0x08,'SYNC'],[0x04,'NODE'],[0x02,'CRC_OK'],[0x01,'PKT_OK']],FF=[[0x40,'voll'],[0x20,'nicht leer'],[0x08,'Überlauf']];
+ const flg=p=>p.fl?FL.filter(x=>p.fl&x[0]).map(x=>x[1]).join(' ')+' · FIFO '+(FF.filter(x=>p.ff&x[0]).map(x=>x[1]).join(' ')||'leer'):'';
+ head('rpk',['Zeit','','Frequenz','Signal','CRC','Länge','Chip-Flags','Hex'],R.list.map(p=>[age(R.now-p.ms),p.tx?'<span class="warn">TX</span>':'RX',mhz(p.ch),p.tx?'–':p.rssi+' dBm',p.crc?'ok':p.fl&&!(p.fl&2)?'<span class="bad">CRC-Fehler im Chip</span>':'<span class="bad">falsch</span>',p.d.length/2,flg(p),hex(p.d)]))}
  const h=s.ch348;rows('chst',[['CH348',h.ok?'<span class="ok">verbunden</span>, Version '+h.ver:'<span class="bad">nicht verbunden</span>'],['ungültige Blöcke',h.bad]]);
  head('ved',['Port','Gerät','Seriennr.','Batterie','Strom','PV / Leistung','Zustand / SoC','Blöcke ok / Fehler','Alter','Bytes'],h.ports.map((p,i)=>{const x=p.f||{};
   return[i,p.dev||(x.PID?'PID '+x.PID:'–'),x['SER#']||'–',x.V!=null?f(x.V/1000,2,'V'):'–',x.I!=null?f(x.I/1000,2,'A'):'–',

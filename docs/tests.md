@@ -146,11 +146,13 @@ Ergebnisse:
 - Die Seite meldete „gefunden“ auch mit abgerissenem GND am Modul. Der Test schreibt 0xAA in ein Register und liest es zurück, das lief trotzdem durch. Gültige Pakete kamen erst mit GND.
 - Spannung am Chip aus der Messung des CMT2300A (VDD = LBD_RESULT / 255 × 4,8 V, AN147): 3,01–3,12 V. Ohne GND nicht gemessen.
 - Ein HMS sendet nur, wenn eine DTU ihn abfragt. Mithören zeigt also nur Verkehr, wenn eine DTU arbeitet.
-- Garagen-HMS: Eine andere DTU fragte ihn auf 863,25 MHz ab und bekam keine Antwort. Das Board als DTU auf 865,00 MHz bekam zuerst auch keine. Nach dem Kanalwechsel-Befehl auf 868,00 MHz antwortete er sofort, mit −51 dBm. Er hörte also nicht auf 865 MHz, wie die OpenDTU-Doku es nach 15 Minuten ohne Kontakt beschreibt.
-- WP-HMS im Abstand von 1 s: 244 Anfragen, 244 Antworten, kein Ausfall. Signal −65 bis −84 dBm je nach Standort des Boards. Garagen-HMS alle 5 s.
+- Garagen-HMS: Die OpenDTU Garage fragte ihn auf 863,25 MHz ab und bekam keine Antwort. ESP_venus als DTU auf 865,00 MHz bekam zuerst auch keine. Nach dem Kanalwechsel-Befehl auf 868,00 MHz antwortete er sofort, mit −51 dBm. Er hörte also nicht auf 865 MHz, wie die OpenDTU-Doku es nach 15 Minuten ohne Kontakt beschreibt.
+- Frequenzwechsel der DTU von 865,00 auf 869,50 MHz (14:41 Uhr): ESP_venus schickte den Kanalwechsel auf 868,00 MHz, beide HMS antworteten aber nicht. Sie arbeiteten weiter auf 865,00 MHz und hörten 868,00 MHz nicht. Um 14:56 Uhr, rund 15 Minuten nach dem letzten Kontakt, antworteten beide auf 869,50 MHz. Ein Wechsel der DTU-Frequenz kostet also rund 15 Minuten ohne Daten.
+- Sendeleistung (je 60 s): bei −10 dBm antwortete der Garagen-HMS nicht (20 Anfragen, 0 Antworten), der WP-HMS kam nur 34-mal statt 60-mal dran. Bei 0 dBm beide fehlerfrei. Eingestellt: 0 dBm.
+- WP-HMS im Abstand von 1 s: 244 Anfragen, 244 Antworten, kein Ausfall. Signal −65 bis −84 dBm je nach Standort von ESP_venus. Garagen-HMS alle 5 s.
 - Die Bibliothek hat nur einen gemeinsamen Abstand und fragt reihum ab. Den Abstand je Gerät regelt die Firmware: Sie gibt immer nur ein fälliges Gerät frei, und nur bei leerer Warteschlange der Bibliothek.
 - `isReachable()` und `isProducing()` der Bibliothek sind nur bei freigegebener Abfrage wahr. Die Seite rechnet „erreichbar“ selbst: Daten da, Fehlerzähler unter der Schwelle.
-- Ungeklärt: Beim Mithören meldet der Chip alle 1–3 s „Paket da“ (PKT_OK), aus dem FIFO kommt aber Länge 0. Das passiert unabhängig von gültigen Paketen und auch, wenn die Firmware das RSSI-Register kaum noch liest. Im DTU-Betrieb über die Bibliothek kam es nicht vor.
+- Pakete mit Länge 0 beim Mithören: Der Chip meldet Präambel, Sync und „Paket fertig“, aber kein CRC_OK, der FIFO ist leer. Er verwirft also Pakete mit falscher CRC. Auf 863,25 MHz, wo die OpenDTU Garage sendete, kamen in 60 s 32 gültige Anfragen und 88 solche Pakete, auf 865,00 MHz ohne fremde DTU keines. Am wahrscheinlichsten sind es schwach empfangene Pakete der OpenDTU Garage. Die Seite zeigt sie als „CRC-Fehler im Chip“.
 - Antenne bei allen Tests: eine 2,4-GHz-WLAN-Antenne.
 
 Am PC getestet, bevor die Firmware aufs Board ging:

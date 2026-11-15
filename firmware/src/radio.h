@@ -61,6 +61,7 @@ private:
         bool crc;
         bool tx;
         uint8_t len;
+        uint8_t flags, fifo;    // INT_FLAG und FIFO_FLAG beim Mithoeren, sonst 0
         uint8_t d[RADIO_PKT_MAX];
     };
     struct Peer {
@@ -91,7 +92,8 @@ private:
     static void task(void *arg);
     void run();
     void tune(uint8_t ch);
-    void receive();
+    void receive(uint8_t flags);
+    void record_diag(uint8_t flags, uint8_t fifo) { diag_flags = flags; diag_fifo = fifo; }
     void close_dwell();
     void apply_poll();
     void apply_op(const DevOp &op);
@@ -126,6 +128,7 @@ private:
     Dev devs[RADIO_DEVS];
     uint8_t ndevs = 0;
     uint32_t dev_last[RADIO_DEVS] = {};     // letzte Abfrage, nur im RAM
+    uint8_t diag_flags = 0, diag_fifo = 0;
     int8_t pending = -1;                    // freigegebenes Geraet, auf dessen Abfrage gewartet wird
     uint32_t last_rssi = 0;
 };

@@ -5,6 +5,7 @@
 #include <cmt2300a.h>
 #include <cmt2300a_defs.h>
 
+#include "dpl.h"
 #include "log.h"
 #include "util.h"
 
@@ -134,6 +135,7 @@ void RadioTest::add_to_lib(const Dev &d)
     if (iv) {
         iv->setEnablePolling(false);
         iv->setEnableCommands(false);
+        iv->setReachableThreshold(2);       // wie in den Configs der OpenDTUs
     } else {
         logf("Funk: Seriennummer %04lx%08lx, Typ unbekannt", (unsigned long)(d.serial >> 32),
              (unsigned long)d.serial);
@@ -341,8 +343,10 @@ void RadioTest::close_dwell()
     c.n = 0;
 }
 
-void RadioTest::receive()
+void RadioTest::receive(uint8_t flags)
 {
+    // Zur Klaerung der Pakete mit Laenge 0: FIFO-Zustand vor dem Lesen festhalten
+    uint8_t fifo = CMT2300A_ReadReg(CMT2300A_CUS_FIFO_FLAG);
     int8_t rssi = (int8_t)CMT2300A_GetRssiDBm();
     uint8_t d[RADIO_PKT_MAX];
     uint8_t len = 0;
@@ -353,7 +357,9 @@ void RadioTest::receive()
     CMT2300A_ReadFifo(d, len);
     CMT2300A_ClearInterruptFlags();
     CMT2300A_ClearRxFifo();
+    record_diag(flags, fifo);
     record(d, len, rssi, ch, false);
+    record_diag(0, 0);
 }
 
 // Paket in Liste und Geraetetabelle eintragen. Beim Mithoeren aus receive(), im
@@ -365,6 +371,8 @@ void RadioTest::record(const uint8_t *d, uint8_t len, int8_t rssi, uint8_t c, bo
     p.ch = c;
     p.rssi = rssi;
     p.tx = tx;
+    p.flags = diag_flags;
+    p.fifo = diag_fifo;
     p.len = len > RADIO_PKT_MAX ? RADIO_PKT_MAX : len;
     memcpy(p.d, d, p.len);
     p.crc = p.len > 1 && crc8(p.d, p.len - 1) == p.d[p.len - 1];
@@ -568,6 +576,7 @@ void RadioTest::run()
             schedule(now);
             Hoymiles.loop();
             after_loop(now);
+            dpl_step(now, true);
             if (now - last_lbd >= 1000) {
                 last_lbd = now;
                 lbd = CMT2300A_ReadReg(CMT2300A_CUS_LBD_RESULT);
@@ -577,6 +586,7 @@ void RadioTest::run()
             continue;
         }
 
+        dpl_step(now, false);
         if (mode == M_SCAN && now - dwell_start >= RADIO_DWELL_MS) {
             close_dwell();
             uint8_t next = ch + 1;
@@ -595,7 +605,7 @@ void RadioTest::run()
         // Millisekunde kamen viele Pakete mit Laenge 0, im DTU-Betrieb ohne das keines.
         uint8_t fl = CMT2300A_ReadReg(CMT2300A_CUS_INT_FLAG);
         if (fl & CMT2300A_MASK_PKT_OK_FLG) {
-            receive();
+            receive(fl);
         } else if (!(fl & (CMT2300A_MASK_PREAM_OK_FLG | CMT2300A_MASK_SYNC_OK_FLG)) &&
                    now - dwell_start >= RADIO_SETTLE_MS && now - last_rssi >= 10) {
             last_rssi = now;
@@ -692,9 +702,9 @@ void RadioTest::json(String &o)
     uint32_t first_i = count > RADIO_PKTS ? count - RADIO_PKTS : 0;
     for (uint32_t i = count; i > first_i; i--) {
         const Pkt &p = ring[(i - 1) % RADIO_PKTS];
-        snprintf(b, sizeof(b), "%s{\"ms\":%lu,\"ch\":%u,\"rssi\":%d,\"crc\":%s,\"tx\":%s,\"d\":",
+        snprintf(b, sizeof(b), "%s{\"ms\":%lu,\"ch\":%u,\"rssi\":%d,\"crc\":%s,\"tx\":%s,\"fl\":%u,\"ff\":%u,\"d\":",
                  i == count ? "" : ",", (unsigned long)p.ms, p.ch, p.rssi, p.crc ? "true" : "false",
-                 p.tx ? "true" : "false");
+                 p.tx ? "true" : "false", p.flags, p.fifo);
         o += b;
         json_hex(o, p.d, p.len);
         o += '}';
