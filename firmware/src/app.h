@@ -31,7 +31,6 @@ extern bool can_ok;
 extern VEBus vebus;
 extern SerialMonitor rs_left;
 extern LeftMode left_mode;
-extern bool cmt_found;
 extern Relay relays[2];
 extern const char BUILD[];   // Datum und Uhrzeit des Builds aus main.cpp
 

@@ -147,6 +147,9 @@ void HoymilesRadio_CMT::loop()
             f.wasReceived = false;
             f.mainCmd = 0x00;
             _radio->read(f.fragment, f.len);
+            if (onPacket) {
+                onPacket(f.fragment, f.len, f.rssi, f.channel, false);
+            }
             _rxBuffer.push(f);
         }
         _radio->flush_rx();
@@ -294,6 +297,9 @@ void HoymilesRadio_CMT::sendEsbPacket(CommandAbstract& cmd)
     ESP_LOGD(TAG, "TX %s %.2f MHz --> %s",
         cmd.getCommandName().c_str(), getFrequencyFromChannel(_radio->getChannel()) / 1000000.0, cmd.dumpDataPayload().c_str());
 
+    if (onPacket) {
+        onPacket(cmd.getDataPayload(), cmd.getDataSize(), 0, _radio->getChannel(), true);
+    }
     if (!_radio->write(cmd.getDataPayload(), cmd.getDataSize())) {
         ESP_LOGE(TAG, "TX SPI Timeout");
     }

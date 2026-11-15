@@ -2,7 +2,7 @@
 // sind bisher nur VE.Bus RX/TX. GPIO 19/20 sind USB, 33-37 PSRAM, 43/44 die Konsole auf
 // UART0. Die Strapping-Pins 0 und 45 bleiben frei. GPIO 3 und 46 tragen nur Signale des
 // CMT2300A, die beim Start niemand treibt.
-// Frei: GPIO 1, 17, 21, 39, 40, 47.
+// Frei: GPIO 1, 10, 17, 18, 21, 39, 40, 47.
 #pragma once
 
 // ADuM1201 neben den S3-Pins, GPIO 4 und 5 laufen gerade hinueber, siehe docs/layout_lochraster.md
@@ -20,16 +20,15 @@
 #define I2C_SDA     16
 #define I2C_SCL     15
 
-// CMT2300A (Modul 10298-V1.0) per Pigtail oben am S3 angeloetet: sechs Pins nebeneinander von
-// GPIO 18 bis 10, dazu VCC an 3V3 und GND. Namen wie auf dem Modul, GPIO1 des Moduls bleibt frei.
+// CMT2300A (Modul 10298-V1.0) per Pigtail oben am S3 angeloetet: vier Pins nebeneinander von
+// GPIO 8 bis 9, dazu VCC an 3V3 und GND. Namen wie auf dem Modul. GPIO1 bis GPIO3 des Moduls
+// bleiben frei: Ohne GPIO3 fragt die Bibliothek den Paketeingang per SPI ab, GPIO2 wertet sie nicht aus.
 // GPIO 46 muss beim Reset low sein, sonst gibt es keinen Download-Modus. Der interne
 // Pull-down haelt ihn low, SCLK ist am CMT2300A ein Eingang.
-#define CMT_GPIO2   18
 #define CMT_CSB     8
 #define CMT_SDIO    3
 #define CMT_SCLK    46
 #define CMT_FCSB    9
-#define CMT_GPIO3   10
 
 // Relais nebeneinander, Bestueckung nicht im Lochraster-Plan
 #define FAN_RELAY   11
@@ -48,7 +47,7 @@
 #define SC16_MISO   41      // SO
 #define SC16_SCK    38      // SCLK
 
-// E-Paper: Stiftleiste im Plan entfallen. Frei sind noch GPIO 1, 17, 21, 39, 40, 47.
+// E-Paper: Stiftleiste im Plan entfallen. Frei sind noch GPIO 1, 10, 17, 18, 21, 39, 40, 47.
 
 // RGB-LED des Boards (WS2812), ueber die Loetbruecke "RGB" an GPIO 48
 #define RGB_LED     48

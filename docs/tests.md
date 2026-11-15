@@ -100,10 +100,12 @@ Damit ich die Anschlüsse vorab prüfen kann, zeigt die Firmware (Env `s3`) auf 
 | CAN | JK-BMS nach Victron-Format gelesen, alle IDs mit Rohdaten, Fehlerzähler |
 | VE.Bus / RS485 | linker Kanal: VE.Bus nur hören oder RS485-Test |
 | VE.Direct | 8 Ports am CH348: Gerät, Spannung, Strom, PV, Zustand, Prüfsummen |
+| Funk | CMT2300A: Mithören, Kanalscan, gehörte Geräte, Pakete, Spannung am Chip (seit 15.11.) |
+| DTU | Geräteliste mit Name, Seriennummer, Abfrage ein/aus und Abstand, Werte der HMS (seit 15.11.) |
 | Konsole | Protokoll der Firmware, auch Meldungen der IDF-Treiber |
 | System | Laufzeit, Neustartgrund, WLAN, Speicher, Firmware-Update über WLAN |
 
-Gesendet wird nur auf Knopfdruck im RS485-Test:
+Gesendet wird nur auf Knopfdruck im RS485-Test und für Geräte, deren Abfrage im Reiter DTU eingeschaltet ist:
 - VE.Bus hört nur zu, das Senden ist ausgeschaltet.
 - CAN läuft listen-only.
 - Der CH348 empfängt nur. Der alte Schleifentest hat auf allen 8 Ports gesendet, das darf an den MPPT nicht passieren.
@@ -131,6 +133,25 @@ Erster Start auf dem Board der Lochrasterplatine (14.11.2026, MAC `7C:E8:B1:A4:A
 - Nach einem Fehlschlag versucht Arduino nur einmal neu und nach `AUTH_FAIL` gar nicht mehr. Die Firmware startet nach 20 s ohne Verbindung selbst einen neuen Versuch.
 - Das Update nutzt die IDF-Funktionen mit sequentiellem Schreiben und 15 s Zeitgrenze für den Upload.
 - Mit dem CH348 an der nativen Buchse, alles über die COM-Buchse des Laptops versorgt: Nach zwei von drei Updates meldete der S3 „Unterspannung“, einmal brach ein Update mittendrin mit Neustart wegen Unterspannung ab. Mit einem anderen USB-Kabel danach drei Updates hintereinander, jedes Mal Neustartgrund „Software“, keine Unterspannung. Es lag also am Kabel. Im Betrieb wird die Versorgung ohnehin anders gelöst.
+
+## Funk mit dem CMT2300A (15.11.2026)
+
+Modul per Pigtail an CSB (GPIO 8), SDIO (3), SCLK (46) und FCSB (9), VCC an 3V3, GND. GPIO1 bis GPIO3 des Moduls bleiben frei: Ohne GPIO3 fragt die Bibliothek den Paketeingang per SPI ab, GPIO2 wertet sie nicht aus.
+
+- Reiter Funk: Mithören auf einer Frequenz, Kanalscan 863–870 MHz mit 6 s je Kanal, gehörte Geräte, die letzten 24 Pakete. Sendet nie. Die Kennung im Funk sind die letzten 8 Stellen der Seriennummer.
+- Reiter DTU: Geräteliste mit Name, Seriennummer, Abfrage ein/aus und Abstand je Gerät, dazu DTU-Frequenz und Sendeleistung. Gesendet wird nur für eingeschaltete Geräte. Alles steht im NVS. Die Seriennummern sind nicht im Repo: Die erste Belegung kommt aus `firmware/src/inverters.h` (Vorlage `inverters.h.example`), danach gilt die Seite.
+- Mithören und Kanalscan unterbrechen die Abfrage, ein Knopf setzt sie fort.
+
+Ergebnisse:
+- Die Seite meldete „gefunden“ auch mit abgerissenem GND am Modul. Der Test schreibt 0xAA in ein Register und liest es zurück, das lief trotzdem durch. Gültige Pakete kamen erst mit GND.
+- Spannung am Chip aus der Messung des CMT2300A (VDD = LBD_RESULT / 255 × 4,8 V, AN147): 3,01–3,12 V. Ohne GND nicht gemessen.
+- Ein HMS sendet nur, wenn eine DTU ihn abfragt. Mithören zeigt also nur Verkehr, wenn eine DTU arbeitet.
+- Garagen-HMS: Eine andere DTU fragte ihn auf 863,25 MHz ab und bekam keine Antwort. Das Board als DTU auf 865,00 MHz bekam zuerst auch keine. Nach dem Kanalwechsel-Befehl auf 868,00 MHz antwortete er sofort, mit −51 dBm. Er hörte also nicht auf 865 MHz, wie die OpenDTU-Doku es nach 15 Minuten ohne Kontakt beschreibt.
+- WP-HMS im Abstand von 1 s: 244 Anfragen, 244 Antworten, kein Ausfall. Signal −65 bis −84 dBm je nach Standort des Boards. Garagen-HMS alle 5 s.
+- Die Bibliothek hat nur einen gemeinsamen Abstand und fragt reihum ab. Den Abstand je Gerät regelt die Firmware: Sie gibt immer nur ein fälliges Gerät frei, und nur bei leerer Warteschlange der Bibliothek.
+- `isReachable()` und `isProducing()` der Bibliothek sind nur bei freigegebener Abfrage wahr. Die Seite rechnet „erreichbar“ selbst: Daten da, Fehlerzähler unter der Schwelle.
+- Ungeklärt: Beim Mithören meldet der Chip alle 1–3 s „Paket da“ (PKT_OK), aus dem FIFO kommt aber Länge 0. Das passiert unabhängig von gültigen Paketen und auch, wenn die Firmware das RSSI-Register kaum noch liest. Im DTU-Betrieb über die Bibliothek kam es nicht vor.
+- Antenne bei allen Tests: eine 2,4-GHz-WLAN-Antenne.
 
 Am PC getestet, bevor die Firmware aufs Board ging:
 - SML: ein Telegramm mit 1.8.0, 2.8.0 und 16.7.0, Mehrbyte-Längenfeld, Müll davor. Werte richtig, verfälschte CRC wird verworfen.

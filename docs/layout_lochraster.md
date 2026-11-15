@@ -18,12 +18,12 @@ Board: ESP32-S3-WROOM-1 N16R8. Pinbelegung wie in `firmware/src/pins.h`. Jede Ze
 ┌ Stecker BME280  -- SCL ----| 15         40 |  frei       │
 └                 -- SDA ----| 16         39 |  frei       │
                      frei    | 17         38 |----- SCLK --┘
-┌ CMT2300A        -- GPIO2 --| 18         37 |  belegt
-│ oben am S3      -- CSB ----|  8         36 |  belegt
-│ angelötet       -- SDIO ---|  3         35 |  belegt
-│                 -- SCLK ---| 46          0 |  frei
-│                 -- FCSB ---|  9         45 |  frei
-└                 -- GPIO3 --| 10         48 |  RGB-LED des Boards
+                     frei    | 18         37 |  belegt
+┌ CMT2300A        -- CSB ----|  8         36 |  belegt
+│ oben am S3      -- SDIO ---|  3         35 |  belegt
+│ angelötet       -- SCLK ---| 46          0 |  frei
+└                 -- FCSB ---|  9         45 |  frei
+                     frei    | 10         48 |  RGB-LED des Boards
   Lüfter          -- OUT ----| 11         47 |  frei
   Relais 2        -- OUT ----| 12         21 |  frei
 ┌ ADuM, TJA1050   -- RX -----| 13         20 |  USB, frei
@@ -35,7 +35,7 @@ Board: ESP32-S3-WROOM-1 N16R8. Pinbelegung wie in `firmware/src/pins.h`. Jede Ze
                        nativ: CH348    COM: Flashen
 ```
 
-Der CH348 hängt am USB-Kabel. Der CMT2300A ist per Pigtail oben am S3 angelötet, an den sechs Pins von GPIO 18 bis GPIO 10, am zweiten 3V3-Pin und am untersten GND-Pin. Die Signalnamen stehen so auf dem Modul, GPIO1 bleibt frei. Auf der Platine hat er keinen Draht.
+Der CH348 hängt am USB-Kabel. Der CMT2300A ist per Pigtail oben am S3 angelötet, an den vier Pins von GPIO 8 bis GPIO 9, am zweiten 3V3-Pin und am untersten GND-Pin. Die Signalnamen stehen so auf dem Modul. GPIO1 bis GPIO3 des Moduls bleiben frei: Ohne GPIO3 fragt die Firmware den Paketeingang per SPI ab, GPIO2 wertet sie nicht aus. Auf der Platine hat er keinen Draht.
 
 GPIO 3 und 46 sind Strapping-Pins. GPIO 46 muss beim Reset low sein, sonst kommt der S3 nicht in den Download-Modus. Der interne Pull-down hält ihn low, und SCLK ist am CMT2300A ein Eingang. GPIO 3 trägt SDIO, das treibt beim Start niemand.
 

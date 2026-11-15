@@ -75,6 +75,32 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
  <div class="card"><h2>CH348 / VE.Direct (nur empfangen, 19200 Baud)</h2><div class="wrap"><table id="chst"></table><table id="ved"></table></div></div>
 </section>
 
+<section id="s-radio">
+ <div class="card"><h2>CMT2300A (CSB 8, SDIO 3, SCLK 46, FCSB 9)</h2><table id="rst"></table>
+  <p><select id="rfreq"></select> <button class="btn" onclick="api('radio?ch='+$('rfreq').value).then(t)">mithören</button>
+   <button class="btn" onclick="api('radio?scan=1').then(t)">Kanalscan</button>
+   <button class="btn g" onclick="api('radio?clear=1').then(t)">leeren</button></p>
+  <p class="dim">Mithören und Kanalscan senden nie und schalten die Abfrage aus. Wechselrichter senden nur, wenn eine DTU sie abfragt. Der Kanalscan bleibt 6 s auf jedem Kanal, ein Durchgang dauert knapp 3 min. „Spitze“ gilt seit dem Leeren.</p></div>
+ <div class="card"><h2>Gehörte Geräte</h2><p class="dim">Kennung: die letzten 8 Stellen der Seriennummer. Anfragen sendet die DTU, Antworten der Wechselrichter. Im DTU-Betrieb stehen hier auch die eigenen Anfragen.</p><div class="wrap"><table id="rpeers"></table></div></div>
+ <div class="card"><h2>Kanäle</h2><div class="wrap"><table id="rch"></table></div></div>
+ <div class="card"><h2>Pakete</h2><div class="wrap"><table id="rpk" class="mono"></table></div></div>
+</section>
+
+<section id="s-dtu">
+ <div class="card"><h2>Abfrage als DTU (sendet)</h2><table id="dst"></table>
+  <p>DTU-Frequenz <select id="dfreq"></select> <button class="btn g" onclick="api('radio?dtu='+$('dfreq').value).then(t)">übernehmen</button>
+   Sendeleistung <select id="pa"><option>0</option><option>5</option><option>10</option><option>14</option><option>17</option><option>20</option></select> dBm
+   <button class="btn g" onclick="api('radio?pa='+$('pa').value).then(t)">übernehmen</button></p>
+  <p class="note">Sendet. Erreicht das Board einen Wechselrichter nicht, schickt es ihm auf 868.00 MHz den Befehl, auf die DTU-Frequenz zu wechseln. Nur einschalten, wenn keine andere DTU diesen Wechselrichter abfragt. Gelesen werden nur Messwerte, kein Limit, kein Ein/Aus. Die Einstellungen bleiben über einen Neustart erhalten.</p>
+  <p id="dresume"></p></div>
+ <div class="card"><h2>Geräte</h2><div class="wrap"><table id="rinv"></table></div></div>
+ <div class="card"><h2>Gerät anlegen oder ändern</h2>
+  <p><input id="fid" size="14" placeholder="Seriennummer"> <input id="fname" size="20" maxlength="23" placeholder="Name">
+   Abstand <input id="fiv" size="4" type="number" min="1" max="3600" placeholder="5"> s
+   <button class="btn" onclick="devSave()">speichern</button> <button class="btn r" onclick="if(confirm2(this))devDel()">löschen</button> <span id="fres"></span></p>
+  <p class="dim">Seriennummer mit 12 Stellen vom Typenschild, nur damit kann das Board abfragen. Mit der Kennung (8 Stellen aus dem Funk) lässt sich ein Gerät nur benennen, etwa eine fremde DTU oder ein fremder Wechselrichter. Neue Geräte sind aus.</p></div>
+</section>
+
 <section id="s-log">
  <div class="card"><h2>Konsole</h2><pre id="log"></pre></div>
 </section>
@@ -88,7 +114,7 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
 </section>
 </main>
 <script>
-const tabs=[['home','Übersicht'],['i2c','I²C'],['mt','Zähler'],['can','CAN'],['left','VE.Bus / RS485'],['ved','VE.Direct'],['log','Konsole'],['sys','System']];
+const tabs=[['home','Übersicht'],['i2c','I²C'],['mt','Zähler'],['can','CAN'],['left','VE.Bus / RS485'],['ved','VE.Direct'],['radio','Funk'],['dtu','DTU'],['log','Konsole'],['sys','System']];
 const $=id=>document.getElementById(id);
 let cur='home',S=null,logFrom=0;
 function show(t){cur=t;for(const[k]of tabs){$('s-'+k).classList.toggle('on',k==t);$('b-'+k).classList.toggle('on',k==t)}try{localStorage.tab=t}catch(e){}}
@@ -122,7 +148,7 @@ function render(){const s=S;if(!s)return;const y=s.sys;
  for(const m of s.mt)r.push(['MT681 '+m.name,m.age>=0&&m.age<10000?(m.pwr!=null?f(m.pwr,0,'W')+' · ':'')+(m.imp!=null?f(m.imp/1000,3,'kWh'):''):'<span class="bad">keine Telegramme</span>']);
  r.push(['JK-BMS (CAN)',b.soc!=null?b.soc+' % · '+f(b.v,2,'V')+' · '+f(b.i,1,'A'):'<span class="bad">keine Daten</span>']);
  r.push(['VE.Bus',y.left=='rs485'?'<span class="warn">RS485-Test</span>':yn(s.vebus.sync,'Sync','kein Sync')]);
- r.push(['CMT2300A',yn(s.cmt,'gefunden','nicht gefunden')]);
+ r.push(['CMT2300A',s.cmt.ok?'<span class="ok">gefunden</span> · '+f(s.cmt.vdd,2,'V')+' · '+(s.cmt.mode=='dtu'?s.cmt.devs.filter(v=>v.poll&&v.reach).length+' von '+s.cmt.devs.filter(v=>v.poll).length+' Wechselrichtern erreichbar':s.cmt.pkts+' Pakete gehört'):'<span class="bad">nicht gefunden</span>']);
  r.push(['CH348',s.ch348.ok?'<span class="ok">verbunden</span> · '+s.ch348.ports.filter(p=>p.age>=0&&p.age<5000).length+' Ports mit Daten':'<span class="bad">nicht verbunden</span>']);
  r.push(['WLAN',y.ip?y.ssid+' · '+y.rssi+' dBm':'<span class="bad">getrennt</span>']);rows('home',r);
  $('relays').innerHTML=s.relay.map((x,i)=>'<tr><th>'+x.name+' (GPIO '+x.gpio+')</th><td>'+({frei:'nicht getrieben',low:'low',high:'high'}[x.mode])+'</td><td>'+
@@ -143,6 +169,23 @@ function render(){const s=S;if(!s)return;const y=s.sys;
   ['Temperatur',f(v.temp,1,'°C')],['Lade-Status 0x80',v.st80],['LED an / blinkt',v.led+' / '+v.blink],['Eingangsstrom Grenze akt / min / max',f(v.ilim,1,'A')+' / '+f(v.imin,1,'A')+' / '+f(v.imax,1,'A')]])}
  if(s.rs){const q=s.rs;rows('rsstat',[['Pinprüfung beim Start',esc(q.pins)],['Senden',q.txok?'<span class="ok">frei</span>':'<span class="bad">gesperrt</span> (erwartet: TX offen, RX high getrieben)'],['Empfangen / gesendet',q.rx+' / '+q.tx+' Bytes'],['Rahmen',q.frames]]);
   head('rs',['Zeit','','Länge','Hex','Text'],q.list.map(x=>[age(y.up*1000-x.ms),x.tx?'<span class="warn">TX</span>':'RX',x.len,hex(x.d)+(x.len>96?' …':''),esc(ascii(x.d))]))}
+ const R=s.cmt,mhz=c=>(860+c*0.25).toFixed(2)+' MHz',bar=v=>'<span style="display:inline-block;height:8px;width:'+Math.max(1,Math.min(110,v+130))+'px;background:var(--acc)"></span>';
+ if(!R.ok){rows('rst',[['Chip','<span class="bad">nicht gefunden</span>']]);head('rpeers',[],[]);head('rch',[],[]);head('rpk',[],[]);head('rinv',[],[]);$('dresume').innerHTML='';rows('dst',[['Chip','<span class="bad">nicht gefunden</span>']])}else{
+ rows('rst',[['Chip','<span class="ok">gefunden</span>'],['Versorgung am Chip (LBD)',f(R.vdd,2,'V')],['Betrieb',R.mode=='scan'?'Kanalscan, gerade '+mhz(R.ch)+', '+R.passes+' Durchgänge fertig':R.mode=='dtu'?'<span class="warn">DTU, sendet</span> auf '+mhz(R.dtu_ch)+', '+R.pa+' dBm, Seriennummer '+R.dtu:'hört auf '+mhz(R.ch)],
+  ['Uhrzeit (für die Abfrage nötig)',yn(R.time,'gestellt','fehlt')],['Signal jetzt',R.rssi+' dBm'],
+  ['Pakete gültig / CRC falsch',R.pkts+' / '+R.crc],['Empfang neu gestartet',R.restarts]]);
+ rows('dst',[['Betrieb',R.mode=='dtu'?'<span class="warn">sendet</span> auf '+mhz(R.dtu_ch)+', '+R.pa+' dBm':'sendet nicht, '+(R.mode=='scan'?'Kanalscan':'hört auf '+mhz(R.ch))+(R.suspended?' (Abfrage unterbrochen)':'')],['DTU-Seriennummer',R.dtu],['Uhrzeit (für die Abfrage nötig)',yn(R.time,'gestellt','fehlt')]]);
+ $('dresume').innerHTML=R.suspended&&R.devs.some(v=>v.poll)?'<button class="btn r" onclick="api(\'radio?resume=1\').then(t)">Abfrage fortsetzen</button> Mithören oder Kanalscan hat die Abfrage unterbrochen.':'';
+ if(document.activeElement!=$('dfreq'))$('dfreq').value=R.dtu_ch;if(document.activeElement!=$('pa'))$('pa').value=R.pa;
+ head('rinv',['Name','Kennung','Seriennr.','Typ','Abfrage','Abstand','','erreichbar','Leistung AC','Spannung AC','Netz','Temperatur','Ertrag heute / gesamt','DC je Eingang','Signal','Anfragen / ok / Teil / keine / defekt','Daten'],R.devs.map(v=>[esc(v.name)||'–',v.id,v.serial||'–',v.serial?v.type||'<span class="bad">unbekannt</span>':'nur Name',
+  v.serial&&v.type?'<button class="btn'+(v.poll?' r':' g')+'" onclick="'+(v.poll?'':'if(confirm2(this))')+'devPoll(\''+v.id+'\','+(v.poll?0:1)+')">'+(v.poll?'aus':'ein')+'</button>':'–',v.serial?v.iv+' s':'–',
+  '<button class="btn g" onclick="devEdit(\''+v.id+'\')">bearbeiten</button>',
+  v.reach?'<span class="ok">ja</span>':'nein',f(v.pac,1,'W'),f(v.uac,1,'V'),f(v.f,2,'Hz'),f(v.t,1,'°C'),v.yd!=null?f(v.yd,0,'Wh')+' / '+f(v.yt,3,'kWh'):'–',
+  v.dc?v.dc.map(d=>f(d[0],1,'W')+' ('+f(d[1],1,'V')+')').join(' · '):'–',v.ok||v.part?v.rssi+' dBm':'–',v.tx+' / '+v.ok+' / '+v.part+' / '+v.none+' / '+v.bad,v.age>=0?age(v.age):'–']));
+ const nm=id=>{const d=R.devs.find(v=>v.id==id);return d&&d.name?esc(d.name)+' <span class="dim">'+id+'</span>':id+' <button class="btn g" onclick="devNew(\''+id+'\')">benennen</button>'};
+ head('rpeers',['Wechselrichter','DTU','Frequenz','Anfragen','Signal DTU','Antworten','Signal WR','zuletzt'],R.peers.map(e=>[nm(e.inv)+(e.rsp?'':' <span class="warn">keine Antwort</span>'),e.dtu==R.dtu.slice(4)?'dieses Board':nm(e.dtu),mhz(e.ch),e.req,e.rreq?e.rreq+' dBm':'–',e.rsp,e.rrsp?e.rrsp+' dBm':'–',age(R.now-e.ms)]));
+ head('rch',['Frequenz','Mittel','Spitze','','Pakete'],R.chs.map(c=>[mhz(c.ch)+(c.ch==R.ch?' ◀':''),c.avg+' dBm',c.max+' dBm',bar(c.max),c.pkts||'']));
+ head('rpk',['Zeit','','Frequenz','Signal','CRC','Länge','Hex'],R.list.map(p=>[age(R.now-p.ms),p.tx?'<span class="warn">TX</span>':'RX',mhz(p.ch),p.tx?'–':p.rssi+' dBm',p.crc?'ok':'<span class="bad">falsch</span>',p.d.length/2,hex(p.d)]))}
  const h=s.ch348;rows('chst',[['CH348',h.ok?'<span class="ok">verbunden</span>, Version '+h.ver:'<span class="bad">nicht verbunden</span>'],['ungültige Blöcke',h.bad]]);
  head('ved',['Port','Gerät','Seriennr.','Batterie','Strom','PV / Leistung','Zustand / SoC','Blöcke ok / Fehler','Alter','Bytes'],h.ports.map((p,i)=>{const x=p.f||{};
   return[i,p.dev||(x.PID?'PID '+x.PID:'–'),x['SER#']||'–',x.V!=null?f(x.V/1000,2,'V'):'–',x.I!=null?f(x.I/1000,2,'A'):'–',
@@ -158,11 +201,18 @@ async function scan(){$('scanres').textContent='scanne …';const r=await api('i
 async function setMode(btn){if(!confirm2(btn))return;await api('mode?m='+$('lsel').value+'&baud='+$('lbaud').value);$('st').textContent='startet neu …'}
 async function send(){const v=$('txd').value;const r=await api('send?'+($('txtext').checked?'text=':'hex=')+encodeURIComponent(v));if(r&&r.err)alertx(r.err);t()}
 function alertx(m){$('st').textContent=m}
+async function devPoll(id,on){const r=await api('dev?id='+id+'&poll='+on);if(r&&r.err)alertx(r.err);setTimeout(t,300)}
+function devEdit(id){const d=S.cmt.devs.find(v=>v.id==id);if(!d)return;$('fid').value=d.serial||d.id;$('fname').value=d.name;$('fiv').value=d.serial?d.iv:'';$('fres').textContent='';$('fname').focus()}
+function devNew(id){show('dtu');$('fid').value=id;$('fname').value='';$('fiv').value='';$('fres').textContent='';$('fname').focus()}
+async function devSave(){const id=$('fid').value.trim(),iv=$('fiv').value.trim();const r=await api('dev?id='+encodeURIComponent(id)+'&name='+encodeURIComponent($('fname').value)+(iv?'&iv='+iv:''));
+ $('fres').textContent=r&&r.err?r.err:r?'gespeichert':'Fehler';setTimeout(t,300)}
+async function devDel(){const r=await api('dev?del=1&id='+encodeURIComponent($('fid').value.trim()));$('fres').textContent=r&&r.err?r.err:r?'gelöscht':'Fehler';setTimeout(t,300)}
 async function cantest(){$('cantestres').textContent='läuft …';const r=await api('can_selftest');
  $('cantestres').innerHTML=!r?'Fehler':r.err?esc(r.err):r.start=='ESP_ERR_INVALID_STATE'?'<span class="bad">nicht gesendet</span>, Pins als Eingang: TX '+r.pin_tx+', RX '+r.pin_rx+' (erwartet: TX offen, RX high getrieben)':(r.ok==10?'<span class="ok">in Ordnung</span>':'<span class="bad">fehlerhaft</span>')+
  ': '+r.sent+' gesendet, '+r.ok+' richtig zurück, '+r.wrong+' falsch, '+r.lost+' verloren · TX-Fehlerzähler '+r.tx_err+', Busfehler '+r.bus_err+', Zustand '+r.state+' · RX vorher '+r.rx_high+' % high · Pins als Eingang: TX '+r.pin_tx+', RX '+r.pin_rx}
 async function upload(){const fl=$('fw').files[0];if(!fl)return;$('upres').textContent='lade hoch …';const fd=new FormData();fd.append('fw',fl);
  try{const r=await fetch('/update',{method:'POST',body:fd});$('upres').textContent=await r.text()}catch(e){$('upres').textContent='Fehler: '+e}}
+for(const id of['rfreq','dfreq'])for(let c=12;c<=40;c++){const o=document.createElement('option');o.value=c;o.textContent=(860+c*0.25).toFixed(2)+' MHz';if(c==20)o.selected=true;$(id).appendChild(o)}
 t();logt();setInterval(t,2000);setInterval(logt,1500);
 </script></body></html>
 )HTML";

@@ -120,7 +120,7 @@ Der S3 bekommt eine eigene Webseite, sie muss sein. Sie ersetzt auch das HDMI-Di
 - **Einstellen, ab Phase 4:** ESS-Modus, Mindest-SoC, Netz-Sollwert, Firmware-Update. Nur mit Passwort.
 - Sie läuft auf Core 0 und blockiert die Regelung nie. Ein Aufruf darf VE.Bus, DVCC und Zähler nicht berühren.
 - Die Diagramme bleiben in ioBroker. Die Seite zeigt den aktuellen Stand und funktioniert auch ohne ioBroker.
-- **E-Paper, optional:** entfällt vorerst, die Stiftleiste ist aus dem Plan raus. Für ein Display reichen die 6 freien Pins (1, 17, 21, 39, 40, 47).
+- **E-Paper, optional:** entfällt vorerst, die Stiftleiste ist aus dem Plan raus. Für ein Display reichen die 8 freien Pins (1, 10, 17, 18, 21, 39, 40, 47).
 
 ## Hardware (vorläufig)
 

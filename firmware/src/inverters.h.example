@@ -1,0 +1,9 @@
+// Wechselrichter fuer die Funk-Abfrage. Als inverters.h kopieren und anpassen,
+// inverters.h bleibt ausserhalb des Repos.
+#pragma once
+
+// Frequenz, auf der das Board als DTU mit den Wechselrichtern spricht (Raster 250 kHz)
+#define DTU_FREQ_HZ 865000000UL
+
+// Name und Seriennummer (hexadezimal, wie auf dem Typenschild)
+#define INVERTERS { {"HMS Beispiel", 0x116400000000ULL} }

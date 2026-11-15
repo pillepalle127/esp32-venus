@@ -6,6 +6,7 @@
 #include "types.h"
 #include <Arduino.h>
 #include <cmt2300wrapper.h>
+#include <functional>
 #include <memory>
 #include <queue>
 #include <vector>
@@ -44,6 +45,9 @@ public:
     void init(const int8_t pin_sdio, const int8_t pin_clk, const int8_t pin_cs, const int8_t pin_fcs, const int8_t pin_gpio2, const int8_t pin_gpio3);
     void loop();
     void setPALevel(const int8_t paLevel);
+
+    // esp32-venus: Mitschnitt jedes empfangenen und gesendeten Pakets fuer die Testseite
+    std::function<void(const uint8_t* data, uint8_t len, int8_t rssi, uint8_t channel, bool tx)> onPacket;
     void setInverterTargetFrequency(const uint32_t frequency);
     uint32_t getInverterTargetFrequency() const;
 

@@ -55,13 +55,13 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 | MT681 Haus, UART2, 9600 Baud | RX | 7 | Pfostenstecker MT681: GND, 3V3, Haus, WP |
 | MT681 Wärmepumpe, RMT, 9600 Baud | RX | 6 | Pfostenstecker MT681 |
 | Kellerlüftung, I²C | SDA / SCL | 16 / 15 | die beiden BME280 (0x76 außen, 0x77), je ein Pfostenstecker: GND, 3V3, SDA, SCL |
-| Funk, ein CMT2300A für beide HMS | GPIO2, CSB, SDIO, SCLK, FCSB, GPIO3 | 18, 8, 3, 46, 9, 10 | Modul per Pigtail oben am S3 angelötet, sechs Pins nebeneinander, dazu VCC an 3V3 und GND. GPIO1 bleibt frei |
+| Funk, ein CMT2300A für beide HMS | CSB, SDIO, SCLK, FCSB | 8, 3, 46, 9 | Modul per Pigtail oben am S3 angelötet, vier Pins nebeneinander, dazu VCC an 3V3 und GND. GPIO1 bis GPIO3 des Moduls bleiben frei |
 | Kellerlüftung | Lüfter | 11 | Relais |
 | Reserve | Relais 2 | 12 | Relais |
 | JK-BMS, TWAI, 500 kbit/s | TX / RX | 14 / 13 | TJA1050, über ADuM1201 und B0505S isoliert |
 | JK-BMS, RS485 je Pack, SC16IS752 per SPI | CS, SI, SO, SCLK | 2, 42, 41, 38 | CJMCU-752, UART A und B je über ADuM1201, B0505S und MAX13487 isoliert, nur für die Zellspannungen |
 | RGB-LED des Boards | WS2812 | 48 | über die Lötbrücke „RGB“, Farbverlauf in 15 s |
-| Reserve | | 1, 17, 21, 39, 40, 47 | Das E-Paper entfällt vorerst, für eins würden die 6 Pins reichen. |
+| Reserve | | 1, 10, 17, 18, 21, 39, 40, 47 | Das E-Paper entfällt vorerst, für eins würden die Pins reichen. |
 | Flashen, UART0 beim Start | TX / RX | 43 / 44 | COM-Buchse auf dem Board |
 | CH348, USB-Host | D− / D+ | 19 / 20 | native USB-Buchse, 5 V über die Brücke `USB-OTG` |
 | nicht beschalten | Strapping | 0, 45 | |

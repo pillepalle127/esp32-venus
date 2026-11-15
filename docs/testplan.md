@@ -88,7 +88,8 @@ Am Bus hängt nichts außer dem Prüfgerät, kein MultiPlus.
 ### A9 CMT2300A
 
 - Nach dem Anlöten: Übersicht zeigt „gefunden“.
-- Danach den Download-Modus prüfen, wegen CLK auf GPIO 46: BOOT halten, RST kurz drücken, flashen über COM. **In Ordnung:** esptool meldet den Chip und schreibt.
+- Danach den Download-Modus prüfen, wegen SCLK auf GPIO 46: BOOT halten, RST kurz drücken, flashen über COM. **In Ordnung:** esptool meldet den Chip und schreibt.
+- „gefunden“ beweist nur SPI. Den Empfang zeigt erst ein HMS im Reiter DTU: Abfrage einschalten. **In Ordnung:** erreichbar, Antworten ohne Ausfälle, Werte plausibel. Erledigt am 15.11.2026, siehe [tests.md](tests.md).
 
 ### A10 Relais-Pins
 

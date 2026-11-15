@@ -10,6 +10,7 @@
 #include "pins.h"
 #include "devices.h"
 #include "log.h"
+#include "radio.h"
 #include "util.h"
 #include "web_page.h"
 
@@ -150,7 +151,8 @@ static void handle_status()
     }
 
     // CMT2300A
-    o += cmt_found ? ",\"cmt\":true" : ",\"cmt\":false";
+    o += ",\"cmt\":";
+    radio.json(o);
 
     // CH348 und VE.Direct
     o += ",\"ch348\":{\"ok\":";
@@ -297,6 +299,53 @@ static void handle_send()
     server.send(200, "application/json", "{}");
 }
 
+// Hex-Zahl mit genau n Stellen, sonst false
+static bool parse_hex(const String &s, unsigned n, uint64_t &v)
+{
+    if (s.length() != n) {
+        return false;
+    }
+    v = 0;
+    for (unsigned i = 0; i < n; i++) {
+        int h = hexval(s[i]);
+        if (h < 0) {
+            return false;
+        }
+        v = v << 4 | (uint64_t)h;
+    }
+    return true;
+}
+
+// Geraeteliste: ?id=<8 oder 12 Hex-Stellen>&name=..&poll=0|1&iv=<s>, loeschen mit &del=1
+static void handle_dev()
+{
+    String id = server.arg("id");
+    id.trim();
+    id.toLowerCase();
+    uint64_t v = 0, serial = 0;
+    if (parse_hex(id, 12, v)) {
+        serial = v;
+    } else if (!parse_hex(id, 8, v)) {
+        server.send(200, "application/json", "{\"err\":\"Seriennummer (12 Stellen) oder Kennung (8 Stellen) in Hex\"}");
+        return;
+    }
+    bool ok;
+    if (server.hasArg("del")) {
+        ok = radio.dev_del((uint32_t)v);
+    } else {
+        String name = server.arg("name");
+        name.trim();
+        int8_t poll = server.hasArg("poll") ? (server.arg("poll") == "1" ? 1 : 0) : -1;
+        long iv = server.hasArg("iv") ? server.arg("iv").toInt() : 0;
+        if (iv < 0 || iv > 3600) {
+            server.send(200, "application/json", "{\"err\":\"Abstand 1 bis 3600 s\"}");
+            return;
+        }
+        ok = radio.dev_set((uint32_t)v, serial, server.hasArg("name") ? name.c_str() : nullptr, poll, (uint16_t)iv);
+    }
+    server.send(200, "application/json", ok ? "{}" : "{\"err\":\"Funk nicht bereit\"}");
+}
+
 // Alle sichtbaren Netze mit BSSID, Kanal und Signalstaerke
 static void handle_scan()
 {
@@ -412,6 +461,28 @@ void web_begin()
     });
     server.on("/api/can_clear", HTTP_GET, []() {
         can_mon.clear();
+        server.send(200, "application/json", "{}");
+    });
+    server.on("/api/dev", HTTP_GET, handle_dev);
+    server.on("/api/radio", HTTP_GET, []() {
+        if (server.hasArg("ch")) {
+            radio.listen((uint8_t)server.arg("ch").toInt());
+        }
+        if (server.hasArg("scan")) {
+            radio.scan();
+        }
+        if (server.hasArg("clear")) {
+            radio.clear();
+        }
+        if (server.hasArg("resume")) {
+            radio.resume();
+        }
+        if (server.hasArg("dtu")) {
+            radio.set_dtu_channel((uint8_t)server.arg("dtu").toInt());
+        }
+        if (server.hasArg("pa")) {
+            radio.set_pa((int8_t)server.arg("pa").toInt());
+        }
         server.send(200, "application/json", "{}");
     });
     server.on("/api/restart", HTTP_GET, []() {

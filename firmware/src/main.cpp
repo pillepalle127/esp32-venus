@@ -1,12 +1,11 @@
 // Testfirmware mit Webseite: zeigt, was an den Anschluessen ankommt, bevor die
 // Funktionen fuer die Anlage dazukommen. Gesendet wird nur auf ausdruecklichen
-// Knopfdruck im RS485-Test. VE.Bus hoert nur zu, CAN ist listen-only, der CH348
-// empfaengt nur.
+// Knopfdruck: RS485-Test, CAN-Selbsttest und die Funk-Abfrage der Wechselrichter.
+// VE.Bus hoert nur zu, CAN ist listen-only, der CH348 empfaengt nur.
 //
 // Aufteilung auf die Kerne wie spaeter: Core 1 nur VE.Bus, Core 0 alles andere.
 
 #include <Arduino.h>
-#include <Hoymiles.h>
 #include <PicoMQTT.h>
 #include <Preferences.h>
 #include <SpiManager.h>
@@ -22,6 +21,7 @@
 #include "app.h"
 #include "log.h"
 #include "pins.h"
+#include "radio.h"
 
 // Zugangsdaten stehen nicht im Code: wifi_secrets.h.example kopieren und anpassen.
 #if __has_include("wifi_secrets.h")
@@ -47,7 +47,6 @@ CanMonitor can_mon;
 bool can_ok;
 SerialMonitor rs_left;
 LeftMode left_mode = LEFT_VEBUS;
-bool cmt_found;
 Relay relays[2] = {{FAN_RELAY, "Lüfter", -1}, {RELAY2, "Relais 2", -1}};
 const char BUILD[] = __DATE__ " " __TIME__;
 
@@ -374,12 +373,8 @@ void can_selftest(String &out)
 static void start_radio()
 {
     SpiManagerInst.register_bus(SPI3_HOST);
-    Hoymiles.init();
-    Hoymiles.initCMT(CMT_SDIO, CMT_SCLK, CMT_CSB, CMT_FCSB, CMT_GPIO2, CMT_GPIO3);
-    Hoymiles.getRadioCmt()->setCountryMode(CountryModeId_t::MODE_EU);
-    Hoymiles.setPollInterval(5);
-    cmt_found = Hoymiles.getRadioCmt()->isConnected();
-    logf("CMT2300A: %s", cmt_found ? "gefunden" : "nicht gefunden");
+    radio.begin(CMT_SDIO, CMT_SCLK, CMT_CSB, CMT_FCSB, CORE_OTHER);
+    logf("CMT2300A: %s", radio.found ? "gefunden, hoere auf der DTU-Frequenz" : "nicht gefunden");
 }
 
 // ---------------------------------------------------------------- Zaehler
@@ -464,7 +459,6 @@ static void net_task(void *)
     uint8_t buf[128];
     while (true) {
         mqtt.loop();
-        Hoymiles.loop();
         wifi_watch();
         web_loop();
         size_t n;
@@ -563,6 +557,8 @@ static void start_task(void *)
 #else
     logf("WLAN: keine Zugangsdaten, src/wifi_secrets.h fehlt");
 #endif
+    // Uhrzeit: Die Hoymiles-Bibliothek fragt Wechselrichter erst mit gestellter Uhr ab
+    configTzTime("CET-1CEST,M3.5.0,M10.5.0/3", "fritz.box", "pool.ntp.org");
 
     xTaskCreatePinnedToCore(net_task, "net", 8192, NULL, 1, &task_net, CORE_OTHER);
     vTaskDelete(NULL);
