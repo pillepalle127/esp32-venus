@@ -59,9 +59,9 @@ Nach Bereichen:
 Die Klemmen des RS485-Moduls für VE.Bus zeigen zur Oberkante, die der beiden Module für die Packs nach rechts über den Rand. Der CAN-Stecker liegt an der Unterkante.
 
 Rechts, die beiden RS485 zu den Packs:
-- Der SC16IS752 sitzt oben rechts, wo vorher die Stiftleiste des E-Paper war. Seine Einzelreihe (VCC bis SDA/VSS) liegt in den Reihen von GPIO 43 bis 37, CS, SI, SO und SCLK gehen gerade hinüber zu GPIO 2, 42, 41 und 38. I2C/SPI und SDA/VSS liegen an GND (SPI-Modus), RESET an 3V3, IRQ bleibt frei. Die Beschriftung steht auf der Unterseite des Moduls: Von oben gesehen liegt die Einzelreihe links, TXA bis CTSB in der Doppelreihe ganz rechts.
+- Der SC16IS752 sitzt oben rechts, wo vorher die Stiftleiste des E-Paper war. Seine Einzelreihe (VCC bis SDA/VSS) liegt in den Reihen von GPIO 43 bis 37, CS, SI, SO und SCLK gehen gerade hinüber zu GPIO 2, 42, 41 und 38. I2C/SPI und SDA/VSS liegen an GND (SPI-Modus), RESET an 3V3, IRQ bleibt frei. VCC liegt an 5 V, der rote Draht läuft unter dem Modul zur 5-V-Leitung der B0505S: Auf dem Modul sitzt ein AMS1117-3.3, VCC ist sein Eingang. An 3V3 bekäme der Chip weniger als 3,3 V, und seine High-Pegel reichen dann nicht sicher für den S3 und die ADuM1201. Bis 16.11.2026 hing VCC an 3V3. Die Beschriftung steht auf der Unterseite des Moduls: Von oben gesehen liegt die Einzelreihe links, TXA bis CTSB in der Doppelreihe ganz rechts.
 - Darunter die beiden RS485-Module waagerecht übereinander, Pins links, Klemmen rechts über den Rand.
-- Der ADuM1201 jedes Packs hängt unter der Platine unter seinem Modul, gewendet: Bauteile nach unten. Seite 2 zeigt zum RS485-Modul, Seite 1 zum SC16IS752, wie beim ADuM für VE.Bus. Von oben gesehen liegt Seite 2 als U2, A1, B0, G2 in den Reihen von VCC, TXD, RXD und GND: Alle vier gehen gerade hinüber, ohne Kreuzung. Kanal A läuft vom TXD des Moduls (A1) zum RX des SC16IS752 (A0), Kanal B vom TX des SC16IS752 (B1) zum RXD des Moduls (B0).
+- Der ADuM1201 jedes Packs hängt unter der Platine unter seinem Modul, gewendet: Bauteile nach unten. Zwischen den Pins des RS485-Moduls und Seite 2 bleibt eine Spalte frei. Seite 2 zeigt zum RS485-Modul, Seite 1 zum SC16IS752, wie beim ADuM für VE.Bus. Von oben gesehen liegt Seite 2 als U2, A1, B0, G2 in den Reihen von VCC, TXD, RXD und GND: Alle vier gehen gerade hinüber, ohne Kreuzung. Kanal A läuft vom TXD des Moduls (A1) zum RX des SC16IS752 (A0), Kanal B vom TX des SC16IS752 (B1) zum RXD des Moduls (B0).
 - Der B0505S jedes Packs steht links neben seinem Modul.
 - Jedes Pack hat seine eigene Trennung. Eine gemeinsame würde die Massen beider Packs über den SC16IS752 verbinden.
 - Pack 1 hängt an UART B, Pack 2 an UART A. So liegen die Wege ganz rechts ineinander, ohne Kreuzung.
@@ -76,6 +76,8 @@ Der ADuM1201 für VE.Bus sitzt oben neben den S3-Pins, oberhalb der Pfostensteck
 | G1 an GND | G2 | GND |
 
 TXD am Modul ist der Ausgang des Empfängers (MS2548 Pin 1, gemessen am 15.11.2026), RXD geht an den Eingang des Treibers (Pin 4). Bis zum 15.11. war es hier umgekehrt gezeichnet.
+
+Zwischen den beiden Reihen eines ADuM1201 liegen 5 Raster (12,7 mm), also 4 freie Reihen, auf dem Lochraster gezählt am 16.11.2026. Bis dahin stand im Plan 4 Raster. Die CAN-Seite mit TJA1050 und Stecker sitzt deshalb eine Spalte weiter links. Beim TJA1050 liegen CANH und CANL 19,8 mm neben TX und RX (gemessen), das sind 0,5 mm weniger als die 8 Raster im Plan.
 
 Beim ADuM1201 läuft Kanal A von Seite 2 nach Seite 1, Kanal B umgekehrt (Datenblatt, Tabelle 16). Auf dem Modul heißt die Ziffer 1 Eingang und 0 Ausgang:
 

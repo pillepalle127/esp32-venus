@@ -59,7 +59,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 | Kellerlüftung | Lüfter | 11 | Relais |
 | Reserve | Relais 2 | 12 | Relais |
 | JK-BMS, TWAI, 500 kbit/s | TX / RX | 14 / 13 | TJA1050, über ADuM1201 und B0505S isoliert |
-| JK-BMS, RS485 je Pack, SC16IS752 per SPI | CS, SI, SO, SCLK | 2, 42, 41, 38 | CJMCU-752 mit Quarz 1,8432 MHz (höchstens 115200 Baud), UART A und B je über ADuM1201, B0505S und RS485-Modul (MS2548) isoliert, nur für die Zellspannungen |
+| JK-BMS, RS485 je Pack, SC16IS752 per SPI | CS, SI, SO, SCLK | 2, 42, 41, 38 | CJMCU-752 mit Quarz 1,8432 MHz (höchstens 115200 Baud), VCC an 5 V für den AMS1117 auf dem Modul, UART A und B je über ADuM1201, B0505S und RS485-Modul (MS2548) isoliert, nur für die Zellspannungen |
 | RGB-LED des Boards | WS2812 | 48 | über die Lötbrücke „RGB“, Farbverlauf in 15 s |
 | Reserve | | 1, 10, 17, 18, 21, 39, 40, 47 | Das E-Paper entfällt vorerst, für eins würden die Pins reichen. |
 | Flashen, UART0 beim Start | TX / RX | 43 / 44 | COM-Buchse auf dem Board |
@@ -277,6 +277,7 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 - [MS2548 bei LCSC](https://www.lcsc.com/product-detail/C42415856.html)
 - [ADuM1200/ADuM1201 Datenblatt](https://www.analog.com/media/en/technical-documentation/data-sheets/adum1200_1201.pdf)
 - [AO3402 Datenblatt (AOS)](https://www.aosmd.com/sites/default/files/res/datasheets/AO3402.pdf)
+- [B0505S Datenblatt (Mornsun, Serie B_S-1WR3)](https://www.mornsun-power.com/public/uploads/pdf/B_S-1WR3.pdf)
 
 ## Lizenz
 
