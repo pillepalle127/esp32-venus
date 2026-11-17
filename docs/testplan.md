@@ -6,24 +6,28 @@ Ich prüfe jede Strecke einzeln, bevor der S3 an die Anlage kommt. Werkzeug ist 
 - **Teil B** ist Phase 2 aus [PLAN.md](../PLAN.md): Der S3 hört an der Anlage mit und sendet nichts. Jeden Schritt in Teil B spreche ich vorher einzeln ab.
 - Die Ergebnisse trage ich unten in die Tabelle ein.
 
-## Anstehend (Stand 15.11.2026)
+## Anstehend (Stand 17.11.2026)
 
-Nach Wichtigkeit für das Ziel, Venus zu ersetzen:
+Erledigt seit 15.11.: A6c, B4, B3 und der erste Test mit Senden am MultiPlus (C1, siehe Ergebnisse). Nach Wichtigkeit für das Ziel, Venus zu ersetzen:
 
 | Nr. | Test | Wo | Braucht vorher |
 |---|---|---|---|
-| 1 | A6c RS485 über Kreuz, alle drei Ketten. Einziger Nachweis des Sendewegs zum MultiPlus. | Tisch | die drei ADuM1201 gewendet, dann Firmware mit VE.Bus RX GPIO 4 und TX GPIO 5 aufspielen |
-| 2 | B4 VE.Bus am MultiPlus, nur hören | Anlage | Absprache, Bedingungen in der Tabelle unten |
-| 3 | B3 CAN am JK-BMS, nur hören | Anlage | Absprache, 120 Ω am Modul entfernt |
-| 4 | B5 VE.Direct, die übrigen MPPT und der SmartShunt | Anlage | Absprache |
-| 5 | B7 Regelung WP-HMS | Anlage | Absprache, MT681 WP an ESP_venus, OpenDTU WP aus |
-| 6 | B6 JK-BMS über RS485, Zellspannungen beider Packs | Anlage | Absprache, A6c, Firmware: JK-Protokoll (fehlt noch) |
-| 7 | A9 Rest: Download-Modus mit dem CMT2300A an GPIO 46 (SCLK), flashen über COM | Tisch | nichts |
-| 8 | A10 Relais-Pins: low/high auf der Seite, Relais schaltet | Tisch | Relaistreiber aufgebaut |
+| 1 | C1 Vorzeichen AC-out (RAM 16): 10 s fest 0 W, während die Kühltruhe läuft | Anlage | Absprache, MK3 ab, ESP_venus an VE.Bus und CAN |
+| 2 | C1 Schalter MultiPlus: nur Laden, nur Wechselrichter, ein (aus nur, wenn AC-out kurz stromlos sein darf) | Anlage | wie 1 |
+| 3 | C1 Regelung bei Lastsprüngen mit der Begrenzung ±500 W um die gemessene Einspeisung: Einschwingzeit, Überschwinger. Danach Verzögerung des MP2 ausmessen, Verstärkung schrittweise erhöhen | Anlage | wie 1, Wasserkocher oder Herd |
+| 4 | C1 Entladeende: bis Mindest-SoC (BMS) entladen, danach Batteriestrom ~0 A, Kühltruhe aus dem Netz | Anlage | 1 erledigt |
+| 5 | C1 Ausfälle: MT681 ab (Batterie ruht), CAN ab (Grenzen 0), Neustart ESP_venus (Zeit bis Passthrough messen) | Anlage | wie 1 |
+| 6 | C1 Dauerlauf: gesendet/quittiert und Prüfsummenfehler über Stunden, einmal A–B beim Senden mit dem Oszilloskop | Anlage | wie 1 |
+| 7 | CAN 0x305/0x307 ans BMS senden, wie bisher Venus. Vorher prüfen, ob das BMS ohne sie auf Dauer etwas meldet | Anlage | Firmware |
+| 8 | A1 Versorgung: Diode am COM ersetzen oder andere Lösung. Ohne sie kein CH348, also keine MPPT und kein SmartShunt | Tisch | – |
+| 9 | B5 VE.Direct, die übrigen MPPT und der SmartShunt, danach DVCC | Anlage | 8 |
+| 10 | Entscheidung SoC-Quelle für Regelung und Mindest-SoC: SmartShunt (wie heute Venus) oder BMS | – | 9 |
+| 11 | Werte an ioBroker über MQTT, wie heute von Tasmota und Venus. Bisher veröffentlicht ESP_venus nichts | – | Firmware |
+| 12 | B6 JK-BMS über RS485, Zellspannungen beider Packs | Anlage | Firmware: JK-Protokoll |
+| 13 | B7 Regelung WP-HMS, A9 Rest | Anlage | CMT2300A wird seit 16.11. nicht gefunden |
+| 14 | A10 Relais-Pins | Tisch | Relaistreiber aufgebaut |
 
-Zu lösen, bevor ESP_venus die MPPT übernimmt: Der CH348 meldet sich nach einem Neustart von ESP_venus erst nach Aus/Ein seiner eigenen 5 V wieder (A8). Jedes Firmware-Update startet ESP_venus neu.
-
-B3 vor B7, weil die Regelung den SoC über CAN liest. Ohne SoC gelten die Spannungsschwellen 53/48 V. A1 kommt mit der endgültigen Versorgung.
+Zu lösen, bevor ESP_venus die MPPT übernimmt: Der CH348 meldet sich nach einem Neustart von ESP_venus erst nach Aus/Ein seiner eigenen 5 V wieder (A8).
 
 ## Teil A: am Tisch
 
@@ -139,7 +143,7 @@ Voraussetzung: A1 bis A3 erledigt. Ablauf und Anschlussart stehen in [PLAN.md, P
 |---|---|---|---|
 | B1 MT681 Haus | parallel zum Tasmota | regelmäßig Telegramme, CRC-Fehler 0, Bezug wie beim Tasmota | Tasmota verliert Werte |
 | B2 MT681 WP | parallel zu DTUoB_WP, berührt dessen Regelung | wie B1, dazu Rahmenfehler 0 | DTUoB_WP verliert Werte |
-| B3 CAN am JK-BMS | A3 für GPIO 14 high, 120 Ω am Modul entfernt (der Bus hat schon zwei) | rund 27 Telegramme pro Sekunde, 21 IDs, Werte wie in Venus, Busfehler 0 | Fehlerzähler steigen, Venus meldet das BMS als weg |
+| B3 CAN am JK-BMS | A3 für GPIO 14 high. Parallel zu Venus: 120 Ω am Modul nur, wenn der Bus sonst nicht an beiden Enden abgeschlossen ist (nicht gemessen). Direkt umgeklemmt statt Venus: Abschluss am Modul dran, ESP_venus muss quittieren. | rund 27 Telegramme pro Sekunde, 21 IDs, Werte wie in Venus, Busfehler 0 | Fehlerzähler steigen, Venus meldet das BMS als weg |
 | B4 VE.Bus am MultiPlus | A3 für GPIO 5 (ADuM B1) high, Bus über 100 kΩ gemessen, Lötbrücke 120_S offen. Das Modul hat einen MS2548 statt MAX13487: Umschaltung bei 256000 Baud und Last von Pull-up und Pull-down am Bus vorher klären. | Sync „empfangen“, Prüfsummenfehler bleiben bei 0, DC-Strom und Temperatur plausibel | Venus oder MultiPlus melden VE.Bus-Fehler |
 | B5 VE.Direct | parallel an den Isolator-Ausgängen, FT4232 bleibt dran | Seriennummer erkannt, Instanz aus `devices.h`, Prüfsummen ohne Fehler, Werte wie in Venus | ein MPPT meldet Fehler #67 |
 | B7 Regelung WP-HMS | Absprache. OpenDTU WP aus, sonst regeln zwei. MT681 WP probehalber an ESP_venus (GPIO 6). Regelung im Reiter DTU einschalten. | WP-Zähler bleibt um 25 W Bezug, neues Limit nur bei mehr als 3 W Abweichung, unter 66 W Bedarf schaltet der HMS ab und danach wieder ein | der Zähler zeigt dauerhaft Einspeisung, der HMS folgt den Limits nicht, die Batterie fällt unter die Stoppschwelle, ohne dass er abschaltet |
@@ -153,6 +157,7 @@ Voraussetzung: A1 bis A3 erledigt. Ablauf und Anschlussart stehen in [PLAN.md, P
 | A1 Versorgung | 17.11.2026 | offen | Über die COM-Buchse kommt keine Versorgung mehr an, vermutlich ist die Diode am COM defekt. Am 16.11. davor Startschleife wegen Unterspannung. |
 | A2 Isolierte Busseiten | 14.11.2026 | in Ordnung | Durchgang S3-Masse zu Busmasse offen. |
 | A3 TX-Pegel | 14.11.2026 | in Ordnung | ADuM A1 (GPIO 4) und B1 (GPIO 14) bei gedrücktem RST, im Download-Modus und im Betrieb immer über 3 V. Seit 15.11. sendet VE.Bus über GPIO 5 auf ADuM-Pin B1, dort neu messen. |
+| A3 TX-Pegel | 17.11.2026 | hingenommen | ADuM B1 (GPIO 5, VE.Bus-TX) bei RST: Spitzen gegen GND, unter 1 V. Ich nehme das hin: Sie stören höchstens einzelne Frames während des Resets. Nach einem Reset baut ESP_venus VE.Bus ohnehin neu auf, der MultiPlus wartet 60 s auf den Sollwert. Download-Modus nicht gemessen. |
 | A4 I²C und BME280 | 14.11.2026 | in Ordnung | SDA und SCL waren anders verdrahtet als geplant, übernommen: SDA 16, SCL 15. 0x76 außen, 0x77 der zweite Sensor, Lesefehler 0. |
 | A5 MT681-Eingänge | 14.11.2026 | entfällt | Gleich am echten Zähler geprüft, siehe B1 und B2. |
 | A6 Linke RS485-Kette | 14.11.2026 | teilweise | Pinprüfung in Ordnung: TX (GPIO 4) offen, RX (GPIO 5) vom ADuM high getrieben. Gesendet 15 Bytes, kein Echo. Ob das Modul sein Senden zurückgibt, ist offen. Sendeweg: A gegen B beim 10-s-Dauersenden messen. |
@@ -166,9 +171,10 @@ Voraussetzung: A1 bis A3 erledigt. Ablauf und Anschlussart stehen in [PLAN.md, P
 | A10 Relais-Pins | | | |
 | B1 MT681 Haus | 14.11.2026 | in Ordnung | GPIO 7 (getauscht wie verdrahtet), 124 Telegramme in 124 s, 0 CRC-Fehler. Ob parallel zum Tasmota, habe ich nicht notiert. |
 | B2 MT681 WP | 14.11.2026 | in Ordnung | GPIO 6 per RMT, 34 Telegramme, 0 CRC-Fehler, 0 Rahmenfehler. |
-| B3 CAN am JK-BMS | | | |
+| B3 CAN am JK-BMS | 17.11.2026 | in Ordnung, ohne Venus | CAN direkt von Venus auf ESP_venus umgeklemmt, Abschluss am Modul dran. Zuerst H und L vertauscht: 0 Frames, 0 Busfehler. Nach dem Tausch, listen-only: rund 3900 Frames/s, alle 0x35E („JK-BMS“). Ohne Quittung wiederholt das BMS seinen ersten Frame endlos. Firmware seitdem im Normalbetrieb: quittiert, sendet keine eigenen Frames. Danach 25 Frames/s, 19 IDs, Busfehler 0. Es fehlen nur 0x305 und 0x307, die kamen von Venus. Werte (Victron-Format): Ladeschluss 51,8 V, Lade-/Entladegrenze 161,5/289,7 A, Entladeschluss 40,5 V, SoC 26 %, SoH 100 %, 48,69 V, 0 A, 17,3 °C. Außerdem startete der CAN-Treiber zeitweise nicht (kein Level-1-Interrupt auf Core 0 frei), seitdem darf er Level 1 bis 3 nehmen. |
 | B4 VE.Bus am MultiPlus | 17.11.2026 | abgebrochen | An der zweiten VE.Bus-Buchse eingesteckt, Firmware „nur hören“: Der MultiPlus ging sofort auf Störung. Ich hatte die 100 kΩ vorher nicht messen lassen. Danach am Modul gemessen: GND–A 6,3 kΩ, GND–B 4,5 kΩ, A–B 10 kΩ, also weit unter 100 kΩ. Auf dem Modul sitzt ein Pull-up an A und ein Pull-down an B. Beide müssen vor dem nächsten Versuch runter. |
 | B4 VE.Bus am MultiPlus | 17.11.2026 | in Ordnung | Pull-up und Pull-down am Modul entfernt, der MultiPlus läuft mit ESP_venus am Bus. Zuerst kein Sync: Im Rohmitschnitt (RS485-Test, 256000 Baud) lag RX in Ruhe low und Frames kamen als `00 3E 3E` statt `FF 83 83`, A und B waren vertauscht. Nach dem Tausch: Frames `83 83 FD …`/`83 83 FE … FF`, rund 80 pro Sekunde. Im Modus „nur hören“: Sync ja, Prüfsummenfehler 0, DC-Strom 0,0–0,1 A, Temperatur 13 °C, Eingangsstromgrenze 25 A (Bereich 0–50 A). Werte stimmen mit Venus überein, Venus ohne VE.Bus-Fehler. |
 | B5 VE.Direct | 14.11.2026 | ein MPPT in Ordnung | Port 0, `HQ2503KHTNV` = solarcharger 294, 27 Blöcke ohne Prüfsummenfehler. RX und TX waren zuerst gekreuzt. |
 | B6 JK-BMS über RS485 | | | |
 | B7 Regelung WP-HMS | | | |
+| C1 ESS am MultiPlus, Senden | 17.11.2026 | Kommunikation in Ordnung, Regelung in Arbeit | MK3 ab, CAN direkt an ESP_venus, ESP_venus sendet den Sollwert (RAM 131, + einspeisen). Fest 0/+200/−200 W: jeder Befehl quittiert, Prüfsummenfehler 0, der MP2 folgt nach rund 4 s (AC −179 W bzw. +181 W). Der MS2548 sendet ohne Pull-up/Pull-down. Vorzeichen: Wechselrichter (RAM 14) negativ beim Entladen, AC-in (RAM 15) positiv beim Einspeisen, AC-out (RAM 16) offen (Kühltruhe lief nicht). Nulleinspeisung, Ziel 20 W, je Zählertelegramm (1 s) die halbe Abweichung nachführen: in Ruhe ±25 W, ein Sprung von 0 auf 3,5 kW dauert rund 9 s. Ein schneller Pfad (bei mehr als 150 W Abweichung direkt auf gemessene Einspeisung plus Abweichung) gab eine Dauerschwingung von −400 bis +700 W, wieder aus. Der MP2 folgt nur mit 300–400 W/s. Kurze Herdpulse (+1,9 kW für 3–4 s) ließen den Sollwert davonlaufen, danach bis 1,7 kW Einspeisung für 3–5 s. Seitdem bleibt der Sollwert höchstens 500 W neben der gemessenen Einspeisung, noch nicht ausgewertet (Lauf b nur 71 s, Last bis 6,6 kW über der Grenze des MP2). Aufzeichnungen: `docs/ess_regelung_2026-11-17_a.csv` (bis 88 s mit schnellem Pfad), `_b.csv`. Danach Senden aus, Rückbau auf Venus. |

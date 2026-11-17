@@ -11,6 +11,7 @@
 #include "pins.h"
 #include "devices.h"
 #include "dpl.h"
+#include "ess.h"
 #include "log.h"
 #include "radio.h"
 #include "sc16.h"
@@ -145,6 +146,10 @@ static void handle_status()
     radio.json(o);
     o += ",\"dpl\":";
     dpl_json(o);
+    if (left_mode == LEFT_VEBUS) {
+        o += ",\"ess\":";
+        ess_json(o);
+    }
     o += ",\"sc16\":";
     sc16_json(o);
 
@@ -657,6 +662,21 @@ void web_begin()
         String o;
         sc16_selftest(o);
         server.send(200, "application/json", o);
+    });
+    server.on("/api/ess", HTTP_GET, []() {
+        if (left_mode != LEFT_VEBUS) {
+            send_err("linker Kanal nicht auf VE.Bus");
+            return;
+        }
+        auto f = [](const char *k) { return server.hasArg(k) ? server.arg(k).toFloat() : NAN; };
+        String m = server.arg("mode");
+        int mode = m == "aus" ? ESS_OFF : m == "null" ? ESS_ZERO : m == "fest" ? ESS_FIXED : -1;
+        int send = server.hasArg("send") ? server.arg("send") == "1" : -1;
+        ess_set(send, mode, f("target"), f("fixed"), f("soc_min"), f("max_dis"), f("max_ch"));
+        if (server.hasArg("sw")) {
+            ess_switch(server.arg("sw").c_str());
+        }
+        server.send(200, "application/json", "{}");
     });
     server.on("/api/dpl", HTTP_GET, []() {
         if (server.hasArg("on")) {

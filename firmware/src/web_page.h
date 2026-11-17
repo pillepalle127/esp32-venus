@@ -71,6 +71,20 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
   <div class="wrap"><table id="rsstat"></table><table id="rs" class="mono"></table></div></div>
 </section>
 
+<section id="s-ess">
+ <div class="card"><h2>ESS am MultiPlus (Sollwert über VE.Bus)</h2><table id="ess"></table>
+  <p>MultiPlus: <span id="esssw"></span></p>
+  <p id="essbtn"></p>
+  <p>Modus <select id="emode"><option value="null">Nulleinspeisung</option><option value="fest">fester Sollwert</option><option value="aus">aus (0 W, sendet nicht)</option></select>
+   Ziel <input id="etarget" size="5" type="number"> W ·
+   fest <input id="efixed" size="6" type="number"> W ·
+   Mindest-SoC <input id="esoc" size="4" type="number"> % ·
+   max. einspeisen <input id="edis" size="5" type="number"> W ·
+   max. laden <input id="ech" size="5" type="number"> W
+   <button class="btn g" onclick="essSave()">übernehmen</button></p>
+  <p class="note">Sollwert positiv = einspeisen (Batterie entlädt), negativ = laden. Ohne „Senden“ rechnet ESP_venus nur mit. Senden nur, wenn Venus nicht am VE.Bus hängt, sonst schicken zwei Geräte Sollwerte. Senden bleibt über einen Neustart erhalten. Kommt 60 s kein Sollwert, geht der MultiPlus in Passthrough. Ohne Zählerwert oder bei gesperrter Entladung deckt AC-in die AC-out-Last, die Batterie ruht. Schalter „Aus“: AC-out ohne Strom.</p></div>
+</section>
+
 <section id="s-ved">
  <div class="card"><h2>CH348 / VE.Direct (nur empfangen, 19200 Baud)</h2><div class="wrap"><table id="chst"></table><table id="ved"></table></div></div>
 </section>
@@ -151,9 +165,10 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
 </section>
 </main>
 <script>
-const tabs=[['home','Übersicht'],['i2c','I²C'],['mt','Zähler'],['can','CAN'],['left','VE.Bus / RS485'],['ved','VE.Direct'],['packs','RS485 Packs'],['radio','Funk'],['dtu','DTU'],['log','Konsole'],['sys','System']];
+const tabs=[['home','Übersicht'],['i2c','I²C'],['mt','Zähler'],['can','CAN'],['left','VE.Bus / RS485'],['ess','ESS MultiPlus'],['ved','VE.Direct'],['packs','RS485 Packs'],['radio','Funk'],['dtu','DTU'],['log','Konsole'],['sys','System']];
 const $=id=>document.getElementById(id);
 let cur='home',S=null,logFrom=0;
+function essSave(){api('ess?mode='+$('emode').value+'&target='+$('etarget').value+'&fixed='+$('efixed').value+'&soc_min='+$('esoc').value+'&max_dis='+$('edis').value+'&max_ch='+$('ech').value).then(t)}
 function show(t){cur=t;for(const[k]of tabs){$('s-'+k).classList.toggle('on',k==t);$('b-'+k).classList.toggle('on',k==t)}try{localStorage.tab=t}catch(e){}}
 for(const[k,n]of tabs){const b=document.createElement('button');b.id='b-'+k;b.textContent=n;b.onclick=()=>show(k);$('nav').appendChild(b)}
 try{if(localStorage.tab&&$('s-'+localStorage.tab))cur=localStorage.tab}catch(e){}show(cur);
@@ -178,9 +193,13 @@ function bms(c){const m={};if(!c)return m;for(const e of c.ids)m[e.id]=e;const o
  if(m[0x35E])o.name=ascii(m[0x35E].d);if(m[0x379])o.cap=le(m[0x379].d,0,2);if(m[0x35A])o.alarm=m[0x35A].d;
  if(m[0x372])o.mod=le(m[0x372].d,0,2);if(m[0x380])o.sn=ascii(m[0x380].d)+(m[0x381]?ascii(m[0x381].d):'');return o}
 const CS={0:'aus',2:'Fehler',3:'Bulk',4:'Absorption',5:'Float',7:'Ausgleich',245:'Start',247:'Ausgleich auto',252:'extern'};
+function sec(n,fn){try{fn()}catch(e){console.error(n,e);const x=$('st');if(x&&!x.textContent.includes(n))x.textContent+=' · Anzeigefehler: '+n}}
 function render(){const s=S;if(!s)return;const y=s.sys;
+ let b={};try{b=bms(s.can)}catch(e){}
+ sec('Status',()=>{
  $('st').textContent=(y.ip||'kein WLAN')+' · '+age(y.up*1000).replace('gerade','0 s')+' Laufzeit · '+(y.left=='rs485'?'RS485-Test':'VE.Bus hören');
- const b=bms(s.can);
+ });
+ sec('Übersicht',()=>{
  const r=[];for(const x of s.bme)r.push(['BME280 '+(x.addr==118?'0x76 außen':'0x77'),x.ok?f(x.t,1,'°C')+' · '+f(x.h,1,'%')+' · '+f(x.p,1,'hPa'):'<span class="bad">fehlt</span>']);
  for(const m of s.mt)r.push(['MT681 '+m.name,m.age>=0&&m.age<10000?(m.pwr!=null?f(m.pwr,0,'W')+' · ':'')+(m.imp!=null?f(m.imp/1000,3,'kWh'):''):'<span class="bad">keine Telegramme</span>']);
  r.push(['JK-BMS (CAN)',b.soc!=null?b.soc+' % · '+f(b.v,2,'V')+' · '+f(b.i,1,'A'):'<span class="bad">keine Daten</span>']);
@@ -188,33 +207,58 @@ function render(){const s=S;if(!s)return;const y=s.sys;
  r.push(['CMT2300A',s.cmt.ok?'<span class="ok">gefunden</span> · '+f(s.cmt.vdd,2,'V')+' · '+(s.cmt.mode=='dtu'?s.cmt.devs.filter(v=>v.poll&&v.reach).length+' von '+s.cmt.devs.filter(v=>v.poll).length+' Wechselrichtern erreichbar':s.cmt.pkts+' Pakete gehört'):'<span class="bad">nicht gefunden</span>']);
  r.push(['CH348',s.ch348.ok?'<span class="ok">verbunden</span> · '+s.ch348.ports.filter(p=>p.age>=0&&p.age<5000).length+' Ports mit Daten':'<span class="bad">nicht verbunden</span>']);
  r.push(['WLAN',y.ip?y.ssid+' · '+y.rssi+' dBm':'<span class="bad">getrennt</span>']);rows('home',r);
+ });
+ sec('Relais',()=>{
  $('relays').innerHTML=s.relay.map((x,i)=>'<tr><th>'+x.name+' (GPIO '+x.gpio+')</th><td>'+({frei:'nicht getrieben',low:'low',high:'high'}[x.mode])+'</td><td>'+
   ['frei','low','high'].map(m=>'<button class="btn'+(x.mode==m?'':' g')+'" onclick="api(\'relay?i='+i+'&m='+m+'\').then(t)">'+m+'</button>').join('')+'</td></tr>').join('');
+ });
+ sec('BME280',()=>{
  head('bme',['Adresse','Chip','Temperatur','Feuchte','Druck','Taupunkt','abs. Feuchte','Lesefehler'],s.bme.map(x=>[x.addr==118?'0x76 außen':'0x77',x.id==96?'BME280':x.id==88?'BMP280':x.id?'0x'+x.id.toString(16):'–',
   x.ok?f(x.t,2,'°C'):'–',x.ok&&x.id==96?f(x.h,1,'%'):'–',x.ok?f(x.p,1,'hPa'):'–',x.ok&&x.id==96?f(dewp(x.t,x.h),1,'°C'):'–',x.ok&&x.id==96?f(absh(x.t,x.h),2,'g/m³'):'–',x.err]));
+ });
+ sec('Zähler',()=>{
  head('mt',['','Quelle','Leistung','Bezug 1.8.0','Einspeisung 2.8.0','letztes Telegramm','Telegramme','CRC-Fehler','Bytes','Rahmenfehler'],s.mt.map(m=>[m.name,m.src,m.pwr!=null?f(m.pwr,0,'W'):'–',m.imp!=null?f(m.imp/1000,4,'kWh'):'–',
   m.exp!=null?f(m.exp/1000,4,'kWh'):'–',m.age>=0?age(m.age)+' ('+m.len+' B)':'–',m.tel+(m.swap?' (CRC vertauscht: '+m.swap+')':''),m.crc,m.bytes,m.ferr==null?'–':m.ferr+(m.rmt===false?' <span class="bad">RMT aus</span>':'')]));
+ });
+ sec('CAN',()=>{
  rows('bms',[['Name',b.name||'–'],['SoC / SoH',b.soc!=null?b.soc+' % / '+b.soh+' %':'–'],['Spannung / Strom',f(b.v,2,'V')+' / '+f(b.i,1,'A')],['Temperatur',f(b.t,1,'°C')],
   ['Ladespannung / Entladespannung',f(b.cvl,1,'V')+' / '+f(b.dvl,1,'V')],['Ladestrom / Entladestrom (Grenzen)',f(b.ccl,1,'A')+' / '+f(b.dcl,1,'A')],
   ['Zelle min / max',b.cmin!=null?b.cmin+' / '+b.cmax+' mV (Δ '+(b.cmax-b.cmin)+')':'–'],['Temperatur min / max',f(b.tmin,0,'°C')+' / '+f(b.tmax,0,'°C')],
   ['Module online',b.mod??'–'],['Kapazität',b.cap!=null?b.cap+' Ah':'–'],['Warnungen/Alarme 35A',b.alarm?hex(b.alarm):'–'],['Seriennummer',b.sn||'–']]);
  const c=s.can;rows('canstat',[['Treiber',c.ok?c.state:'<span class="bad">nicht gestartet</span>'],['Telegramme',c.frames],['Fehlerzähler RX / Busfehler',c.rx_err+' / '+c.bus_err],['verpasst / Überlauf',c.rx_missed+' / '+c.rx_overrun]]);
  head('can',['ID','Anzahl','Alter','Daten','ASCII'],c.ids.slice().sort((a,b)=>a.id-b.id).map(e=>[(e.ext?e.id.toString(16).padStart(8,'0'):e.id.toString(16).padStart(3,'0')).toUpperCase(),e.n,age(c.now-e.ms),hex(e.d),esc(ascii(e.d))]));
+ });
+ sec('VE.Bus/RS485',()=>{
  $('lmode').textContent=y.left=='rs485'?'RS485-Test, '+s.rs.baud+' Baud':'VE.Bus, nur hören';
  $('vebuscard').style.display=y.left=='rs485'?'none':'';$('rscard').style.display=y.left=='rs485'?'':'none';
  if(s.vebus){const v=s.vebus;rows('vebus',[['Sync-Frames',yn(v.sync,'empfangen','keine (1 s)')],['Prüfsummenfehler',v.chk],['DC-Strom (Rundsendung 0x80)',f(v.dci,1,'A')],
   ['Temperatur',f(v.temp,1,'°C')],['Lade-Status 0x80',v.st80],['LED an / blinkt',v.led+' / '+v.blink],['Eingangsstrom Grenze akt / min / max',f(v.ilim,1,'A')+' / '+f(v.imin,1,'A')+' / '+f(v.imax,1,'A')]])}
  if(s.rs){const q=s.rs;rows('rsstat',[['Pinprüfung beim Start',esc(q.pins)],['Senden',q.txok?'<span class="ok">frei</span>':'<span class="bad">gesperrt</span> (erwartet: TX offen, RX high getrieben)'],['Empfangen / gesendet',q.rx+' / '+q.tx+' Bytes'],['Rahmen',q.frames]]);
   head('rs',['Zeit','','Länge','Hex','Text'],q.list.map(x=>[age(y.up*1000-x.ms),x.tx?'<span class="warn">TX</span>':'RX',x.len,hex(x.d)+(x.len>96?' …':''),esc(ascii(x.d))]))}
+ });
+ sec('RS485 Packs',()=>{
  if(s.sc16&&s.sc16.ok)for(const c of s.sc16.ch){const id='p'+c.name;if(document.activeElement!=$(id+'baud'))$(id+'baud').value=c.baud;
   rows(id+'stat',[['Baudrate',c.baud],['Empfangen / gesendet',c.rx+' / '+c.tx+' Bytes'],['Rahmen',c.frames],['Fehler Überlauf / Parität / Rahmen / Break',c.ovr+' / '+c.par+' / '+c.frm+' / '+c.brk]]);
   head(id+'list',['Zeit','','Länge','Hex','Text'],c.list.map(x=>[age(y.up*1000-x.ms),x.tx?'<span class="warn">TX</span>':'RX',x.len,hex(x.d)+(x.len>96?' …':''),esc(ascii(x.d))]))}
- const R=s.cmt,mhz=c=>(860+c*0.25).toFixed(2)+' MHz',bar=v=>'<span style="display:inline-block;height:8px;width:'+Math.max(1,Math.min(110,v+130))+'px;background:var(--acc)"></span>';
- if(!R.ok){rows('rst',[['Chip','<span class="bad">nicht gefunden</span>']]);head('rpeers',[],[]);head('rch',[],[]);head('rpk',[],[]);head('rinv',[],[]);$('dresume').innerHTML='';rows('dst',[['Chip','<span class="bad">nicht gefunden</span>']])}else{
- rows('rst',[['Chip','<span class="ok">gefunden</span>'],['Versorgung am Chip (LBD)',f(R.vdd,2,'V')],['Betrieb',R.mode=='scan'?'Kanalscan, gerade '+mhz(R.ch)+', '+R.passes+' Durchgänge fertig':R.mode=='dtu'?'<span class="warn">DTU, sendet</span> auf '+mhz(R.dtu_ch)+', '+R.pa+' dBm, Seriennummer '+R.dtu:'hört auf '+mhz(R.ch)],
-  ['Uhrzeit (für die Abfrage nötig)',yn(R.time,'gestellt','fehlt')],['Signal jetzt',R.rssi+' dBm'],
-  ['Pakete gültig / CRC falsch',R.pkts+' / '+R.crc],['Empfang neu gestartet',R.restarts]]);
- rows('dst',[['Betrieb',R.mode=='dtu'?'<span class="warn">sendet</span> auf '+mhz(R.dtu_ch)+', '+R.pa+' dBm':'sendet nicht, '+(R.mode=='scan'?'Kanalscan':'hört auf '+mhz(R.ch))+(R.suspended?' (Abfrage unterbrochen)':'')],['DTU-Seriennummer',R.dtu],['Uhrzeit (für die Abfrage nötig)',yn(R.time,'gestellt','fehlt')]]);
+ });
+ sec('ESS',()=>{
+ const E=s.ess;if(E){const ag=ms=>ms>=0?' ('+age(ms)+')':'';
+  rows('ess',[['Zustand',E.send?(E.state=='regelt'?'<span class="ok">regelt, sendet</span>':'<span class="warn">sendet · '+esc(E.state)+'</span>'):esc(E.state)],
+   ['Hauszähler (Bezug +)',E.grid!=null?f(E.grid,0,'W')+ag(E.grid_age):'<span class="bad">kein Wert</span>'],
+   ['Sollwert (+ einspeisen, − laden)','<b>'+f(E.sp,0,'W')+'</b>'+(E.send?'':' (nicht gesendet)')],
+   ['Grenzen einspeisen / laden',f(E.lim_dis,0,'W')+' / '+f(E.lim_ch,0,'W')],
+   ['BMS: SoC · Spannung · Strom',E.soc!=null?f(E.soc,0,'%')+' · '+f(E.v,2,'V')+' · '+f(E.i,1,'A')+ag(E.bms_age):'<span class="bad">keine Daten</span>'],
+   ['BMS: Ladeschluss / Entladeschluss',f(E.cvl,1,'V')+' / '+f(E.dvl,1,'V')],['BMS: Lade- / Entladestrom max.',f(E.ccl,1,'A')+' / '+f(E.dcl,1,'A')],
+   ['gesendet / quittiert',E.sent+' / '+E.acked+(E.sent_age>=0?ag(E.sent_age):'')],
+   ['MultiPlus: Batterie',E.mp_age>=0?f(E.mp_v,2,'V')+ag(E.mp_age):'–'],
+   ['MultiPlus: Wechselrichter / AC-in / AC-out',E.mp_age>=0?f(E.mp_inv,0,'W')+' / '+f(E.mp_mains,0,'W')+' / '+f(E.mp_out,0,'W'):'–'],
+   ['MultiPlus Schalter',esc(E.sw)+(E.sw_cmd!='–'?' <span class="dim">(zuletzt gesendet: '+esc(E.sw_cmd)+')</span>':'')]]);
+  $('esssw').innerHTML=[['ein','Ein'],['laden','Nur Laden'],['wr','Nur Wechselrichter'],['aus','Aus']].map(x=>'<button class="btn'+(E.sw==({ein:'ein',laden:'nur Laden',wr:'nur Wechselrichter',aus:'aus'})[x[0]]?'':' g')+'" onclick="if(confirm2(this))api(\'ess?sw='+x[0]+'\').then(t)">'+x[1]+'</button>').join(' ');
+  $('essbtn').innerHTML='<button class="btn'+(E.send?' r':'')+'" onclick="'+(E.send?'':'if(confirm2(this))')+'api(\'ess?send='+(E.send?0:1)+'\').then(t)">Senden '+(E.send?'aus':'ein')+'</button>';
+  const c=E.cfg,setv=(id,v)=>{if(document.activeElement!=$(id))$(id).value=v};
+  setv('emode',E.mode);setv('etarget',c.target);setv('efixed',c.fixed);setv('esoc',c.soc_min);setv('edis',c.max_dis);setv('ech',c.max_ch)}
+ });
+ sec('Regelung WP',()=>{
  const D=s.dpl;if(D){const ag=ms=>ms>=0?' ('+age(ms)+')':'';
   rows('dpl',[['Zustand',(D.on?(D.state=='regelt'?'<span class="ok">regelt</span>':'<span class="warn">'+esc(D.state)+'</span>'):'aus')],
    ['WP-Zähler (Bezug +)',D.meter!=null?f(D.meter,0,'W')+ag(D.meter_age):'<span class="bad">kein Wert</span>'],
@@ -225,6 +269,14 @@ function render(){const s=S;if(!s)return;const y=s.sys;
   $('dplbtn').innerHTML=D.avail?'<button class="btn'+(D.on?' r':'')+'" onclick="'+(D.on?'':'if(confirm2(this))')+'api(\'dpl?on='+(D.on?0:1)+'\').then(t)">Regelung '+(D.on?'aus':'ein')+'</button>':'<span class="bad">Kein geregelter Wechselrichter (DPL_SERIAL) in der Geräteliste</span>';
   const c=D.cfg;$('dplcfg').textContent='Werte aus der Config der OpenDTU WP: Ziel '+c.target+' W ±'+c.hyst+' W am WP-Zähler, Limit '+c.lower+' bis '+c.upper+' W, Standby '+(c.standby?'erlaubt':'nein')+
    ', Start/Stopp SoC '+c.soc_start+'/'+c.soc_stop+' %, ohne SoC Spannung '+c.v_start+'/'+c.v_stop+' V (korrigiert um '+c.corr+' V/W, Stoppspannung gilt immer), nachts immer Batterie: '+(c.night?'ja':'nein')+', täglicher Neustart des HMS: '+(c.restart>=0?c.restart+' Uhr':'aus')+'.'}
+ });
+ sec('Funk',()=>{
+ const R=s.cmt,mhz=c=>(860+c*0.25).toFixed(2)+' MHz',bar=v=>'<span style="display:inline-block;height:8px;width:'+Math.max(1,Math.min(110,v+130))+'px;background:var(--acc)"></span>';
+ if(!R.ok){rows('rst',[['Chip','<span class="bad">nicht gefunden</span>']]);head('rpeers',[],[]);head('rch',[],[]);head('rpk',[],[]);head('rinv',[],[]);$('dresume').innerHTML='';rows('dst',[['Chip','<span class="bad">nicht gefunden</span>']])}else{
+ rows('rst',[['Chip','<span class="ok">gefunden</span>'],['Versorgung am Chip (LBD)',f(R.vdd,2,'V')],['Betrieb',R.mode=='scan'?'Kanalscan, gerade '+mhz(R.ch)+', '+R.passes+' Durchgänge fertig':R.mode=='dtu'?'<span class="warn">DTU, sendet</span> auf '+mhz(R.dtu_ch)+', '+R.pa+' dBm, Seriennummer '+R.dtu:'hört auf '+mhz(R.ch)],
+  ['Uhrzeit (für die Abfrage nötig)',yn(R.time,'gestellt','fehlt')],['Signal jetzt',R.rssi+' dBm'],
+  ['Pakete gültig / CRC falsch',R.pkts+' / '+R.crc],['Empfang neu gestartet',R.restarts]]);
+ rows('dst',[['Betrieb',R.mode=='dtu'?'<span class="warn">sendet</span> auf '+mhz(R.dtu_ch)+', '+R.pa+' dBm':'sendet nicht, '+(R.mode=='scan'?'Kanalscan':'hört auf '+mhz(R.ch))+(R.suspended?' (Abfrage unterbrochen)':'')],['DTU-Seriennummer',R.dtu],['Uhrzeit (für die Abfrage nötig)',yn(R.time,'gestellt','fehlt')]]);
  $('dresume').innerHTML=R.suspended&&R.devs.some(v=>v.poll)?'<button class="btn r" onclick="api(\'radio?resume=1\').then(t)">Abfrage fortsetzen</button> Mithören oder Kanalscan hat die Abfrage unterbrochen.':'';
  if(document.activeElement!=$('dfreq'))$('dfreq').value=R.dtu_ch;if(document.activeElement!=$('pa'))$('pa').value=R.pa;
  head('rinv',['Name','Kennung','Seriennr.','Typ','Abfrage','Abstand','','erreichbar','Leistung AC','Spannung AC','Netz','Temperatur','Ertrag heute / gesamt','DC je Eingang','Signal','Anfragen / ok / Teil / keine / defekt','Daten'],R.devs.map(v=>[esc(v.name)||'–',v.id,v.serial||'–',v.serial?v.type||'<span class="bad">unbekannt</span>':'nur Name',
@@ -238,13 +290,18 @@ function render(){const s=S;if(!s)return;const y=s.sys;
  const FL=[[0x20,'PKT_ERR'],[0x10,'PREAM'],[0x08,'SYNC'],[0x04,'NODE'],[0x02,'CRC_OK'],[0x01,'PKT_OK']],FF=[[0x40,'voll'],[0x20,'nicht leer'],[0x08,'Überlauf']];
  const flg=p=>p.fl?FL.filter(x=>p.fl&x[0]).map(x=>x[1]).join(' ')+' · FIFO '+(FF.filter(x=>p.ff&x[0]).map(x=>x[1]).join(' ')||'leer'):'';
  head('rpk',['Zeit','','Frequenz','Signal','CRC','Länge','Chip-Flags','Hex'],R.list.map(p=>[age(R.now-p.ms),p.tx?'<span class="warn">TX</span>':'RX',mhz(p.ch),p.tx?'–':p.rssi+' dBm',p.crc?'ok':p.fl&&!(p.fl&2)?'<span class="bad">CRC-Fehler im Chip</span>':'<span class="bad">falsch</span>',p.d.length/2,flg(p),hex(p.d)]))}
+ });
+ sec('VE.Direct',()=>{
  const h=s.ch348;rows('chst',[['CH348',h.ok?'<span class="ok">verbunden</span>, Version '+h.ver:'<span class="bad">nicht verbunden</span>'],['ungültige Blöcke',h.bad]]);
  head('ved',['Port','Gerät','Seriennr.','Batterie','Strom','PV / Leistung','Zustand / SoC','Blöcke ok / Fehler','Alter','Bytes'],h.ports.map((p,i)=>{const x=p.f||{};
   return[i,p.dev||(x.PID?'PID '+x.PID:'–'),x['SER#']||'–',x.V!=null?f(x.V/1000,2,'V'):'–',x.I!=null?f(x.I/1000,2,'A'):'–',
    x.PPV!=null?f(x.PPV,0,'W')+' ('+f(x.VPV/1000,1,'V')+')':x.P!=null?f(x.P,0,'W'):'–',x.CS!=null?(CS[x.CS]||x.CS)+(x.ERR&&x.ERR!='0'?' <span class="bad">ERR '+x.ERR+'</span>':''):x.SOC!=null?f(x.SOC/10,1,'%'):'–',
    p.ok+' / '+p.bad,p.age>=0?age(p.age):'–',p.bytes]}));
+ });
+ sec('System',()=>{
  rows('sys',[['Firmware',y.build+' · '+y.part+', '+esc(y.fwstate)+' · ELF '+y.elf],['vorherige Firmware',y.other?esc(y.other):'–'],['Absturz im Flash',y.coredump?'<span class="bad">ja</span>':'nein'],['Laufzeit',age(y.up*1000)],['Neustartgrund',y.reset],['WLAN',y.ip?y.ssid+', '+y.ip+', '+y.rssi+' dBm':'getrennt'],['MAC',y.mac],
   ['Heap intern frei / min',Math.round(y.heap/1024)+' / '+Math.round(y.heapmin/1024)+' KB'],['PSRAM frei',Math.round(y.psram/1024)+' KB']]);
+ });
 }
 async function t(){const s=await api('status');if(s){S=s;render()}else $('st').textContent='keine Verbindung'}
 async function logt(){const r=await api('log?from='+logFrom);if(r){const p=$('log'),bottom=p.scrollTop+p.clientHeight>=p.scrollHeight-20;

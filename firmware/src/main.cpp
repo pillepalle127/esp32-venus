@@ -1,7 +1,7 @@
 // Testfirmware mit Webseite: zeigt, was an den Anschluessen ankommt, bevor die
 // Funktionen fuer die Anlage dazukommen. Gesendet wird nur auf ausdruecklichen
 // Knopfdruck: RS485-Test, CAN-Selbsttest und die Funk-Abfrage der Wechselrichter.
-// VE.Bus hoert nur zu, CAN ist listen-only, der CH348 empfaengt nur.
+// VE.Bus hoert nur zu, CAN quittiert nur (sendet keine eigenen Frames), der CH348 empfaengt nur.
 //
 // Aufteilung auf die Kerne wie spaeter: Core 1 nur VE.Bus, Core 0 alles andere.
 
@@ -20,6 +20,7 @@
 
 #include "app.h"
 #include "dpl.h"
+#include "ess.h"
 #include "log.h"
 #include "pins.h"
 #include "radio.h"
@@ -267,6 +268,9 @@ static esp_err_t can_install(twai_mode_t mode)
 {
     twai_general_config_t general = TWAI_GENERAL_CONFIG_DEFAULT((gpio_num_t)CAN_TX, (gpio_num_t)CAN_RX, mode);
     general.rx_queue_len = 32;
+    // Voreinstellung ist nur Level 1. Davon ist auf Core 0 keiner mehr frei (USB, UART2, RMT,
+    // I2C, SC16IS752 und WLAN liegen dort), der Treiber startete mit ESP_ERR_NOT_FOUND.
+    general.intr_flags = ESP_INTR_FLAG_LOWMED;
     twai_timing_config_t timing = TWAI_TIMING_CONFIG_500KBITS();
     twai_filter_config_t filter = TWAI_FILTER_CONFIG_ACCEPT_ALL();
     esp_err_t err = twai_driver_install(&general, &timing, &filter);
@@ -280,8 +284,10 @@ static void start_can()
 {
     can_mon.begin();
     // Listen-only: Der S3 quittiert und sendet nichts auf dem Bus.
-    esp_err_t err = can_install(TWAI_MODE_LISTEN_ONLY);
-    logf("CAN: %s (TX GPIO %d, RX GPIO %d, listen-only)", esp_err_to_name(err), CAN_TX, CAN_RX);
+    // Normalbetrieb: Der S3 setzt das ACK-Bit, sendet aber keine eigenen Frames. Ohne Quittung
+    // wiederholt das JK-BMS seinen ersten Frame (0x35E) endlos, wenn sonst niemand am Bus haengt.
+    esp_err_t err = can_install(TWAI_MODE_NORMAL);
+    logf("CAN: %s (TX GPIO %d, RX GPIO %d, quittiert, sendet nicht)", esp_err_to_name(err), CAN_TX, CAN_RX);
     can_ok = err == ESP_OK;
     if (can_ok) {
         xTaskCreatePinnedToCore(can_task, "can", 3072, NULL, 3, &task_can, CORE_OTHER);
@@ -289,7 +295,7 @@ static void start_can()
 }
 
 // Selbsttest der CAN-Kette: ohne Quittung senden und ueber TJA1050 und ADuM selbst
-// empfangen. Sendet auf dem Bus, deshalb nur ohne BMS. Danach wieder listen-only.
+// empfangen. Sendet auf dem Bus, deshalb nur ohne BMS. Danach wieder Normalbetrieb (nur quittieren).
 void can_selftest(String &out)
 {
     char b[200];
@@ -365,9 +371,9 @@ void can_selftest(String &out)
         twai_stop();
         twai_driver_uninstall();
     }
-    err = can_install(TWAI_MODE_LISTEN_ONLY);
+    err = can_install(TWAI_MODE_NORMAL);
     can_ok = err == ESP_OK;
-    logf("CAN: wieder listen-only, %s", esp_err_to_name(err));
+    logf("CAN: wieder quittieren, %s", esp_err_to_name(err));
     can_pause = false;
 }
 
@@ -526,6 +532,9 @@ static void start_task(void *)
     }
 
     start_can();
+    if (left_mode == LEFT_VEBUS) {
+        ess_begin();        // braucht CAN (BMS) und VE.Bus
+    }
     start_radio();
     sc16_begin(CORE_OTHER);
 
