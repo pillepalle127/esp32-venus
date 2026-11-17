@@ -45,7 +45,7 @@ Der S3 hängt an der Anlage und sendet nichts.
 
 Prüfpunkte je Schritt: [docs/testplan.md](docs/testplan.md), Teil B.
 
-- **VE.Bus:** An der zweiten VE.Bus-Buchse des MultiPlus, TX-Leitung gar nicht angeschlossen. Vor dem Stecken messe ich, dass der Bus über 100 kΩ sieht. Der Mitschnitt zeigt auch, was `mk2-dbus` heute an den MultiPlus schickt, vor allem Sollwert und Grenzen.
+- **VE.Bus:** An der zweiten VE.Bus-Buchse des MultiPlus. Die Firmware sendet nicht. Vorher messe ich, dass der TX (GPIO 5, ADuM B1) bei Reset, im Download-Modus und im Betrieb high bleibt (A3) und dass der Bus über 100 kΩ sieht. Der Mitschnitt zeigt auch, was `mk2-dbus` heute an den MultiPlus schickt, vor allem Sollwert und Grenzen.
 - **CAN:** TWAI im Listen-only-Modus am Bus `can1`, Abgleich mit dem Mitschnitt aus Phase 0.
 - **VE.Direct:** Empfang parallel an den Isolator-Ausgängen, der FT4232 bleibt dran. So stoppt kein MPPT mit Fehler #67. Geht das elektrisch nicht, stecke ich nachts einzeln um.
 - **MT681:** Empfang parallel zum Tasmota. Geht das nicht, nehme ich die Werte in dieser Phase per MQTT vom Tasmota.
