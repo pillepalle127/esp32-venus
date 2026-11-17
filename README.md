@@ -79,7 +79,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 - GPIO 3 und 46 sind Strapping-Pins und tragen nur Signale des CMT2300A, die beim Start niemand treibt. GPIO 46 muss beim Reset low sein, sonst gibt es keinen Download-Modus. Der interne Pull-down hält ihn low, SCLK ist am CMT2300A ein Eingang. GPIO 3 wirkt nach meiner Erinnerung nur mit gesetzter eFuse und dann nur auf die Wahl der JTAG-Quelle.
 - Ins Netz geht der S3 über sein WLAN. Ein Ausfall trifft nur die Verbindung zu ioBroker, nicht die Regelung.
 - VE.Bus braucht einen UART am S3: Alle 20 ms kommt ein Sync-Frame, gesendet wird nur in einem engen Fenster danach.
-- Beide HMS laufen über ein CMT2300A. Der Standort läuft seit Jahren, eine Reichweitenfrage gibt es nicht.
+- Beide HMS laufen über ein CMT2300A. 
 
 ## Trennung und Transceiver
 
@@ -92,11 +92,10 @@ Eigene Platine, Plan mit Steckverbindungen und Blockdiagramm: [docs/platine.md](
 - Der ADuM1201 hängt auf der S3-Seite an 3,3 V, auf der Busseite an den 5 V des B0505S. 
 - Der B0505S ist ungeregelt. Der MS2548 braucht laut Datenblatt 4,5–5,5 V, der TJA1050 nach meiner Erinnerung 4,75–5,25 V. Ist die Spannung bei wenig Last zu hoch, hilft ein Lastwiderstand: 250 Ω sind 10 % Last.
 - Der ADuM1201AR reicht für CAN: rund 0,8 µs Laufzeit im schlechtesten Fall, der S3 tastet nach 1,6 µs ab. Der Selbsttest am Tisch lief fehlerfrei.
-- **RS485-Module (VE.Bus und Packs):** Auf den Modulen sitzt ein MS2548 von Ruimeng, kein MAX13487 (Aufdruck abgelesen am 15.11.2026). Belegung laut Datenblatt: Pin 1 R (Ausgang des Empfängers), 2 RE, 3 SHDN, 4 D (Eingang des Treibers), 5 GND, 6 A, 7 B, 8 VCC. Der Modul-Pin TXD geht an Pin 1, mit dem Oszilloskop gemessen: TXD ist der Ausgang des Moduls, RXD sein Eingang. Bis zum 15.11. war es im Plan umgekehrt gezeichnet, deshalb kam auf keinem RS485 etwas an.
-- Der MS2548 schaltet die Richtung selbst: D low treibt den Bus low, D high treibt kurz high und gibt dann frei. Den Ruhezustand halten Pull-up an A und Pull-down an B, die er laut Datenblatt braucht. `ve.bus-library` ist nur mit dem MAX13487 am MultiPlus getestet. Vor dem Anschluss an VE.Bus: A gegen B ohne 120-Ω-Abschluss, Lötbrücke 120_S offen. Für den VE.bus 485 wurde jeweils der pull-up / pull-down entfernt. sonst schaltet der Multiplus sofort mit Fehler ab (beim Einstecken).
-- **TJA1050 (CAN):** ohne Quarz, der S3 hat TWAI. Das Modul bringt einen 120-Ω-Abschluss mit, auf dem Bus sind nur zwei erlaubt.
-- Fertige isolierte Module wie das XY-S485 nicht an VE.Bus. Am JK-BMS möglich, wenn GND der TTL-Seite gegen GND an den Klemmen offen ist.
-- Die Relaistreiber stehen nicht im Lochraster-Plan: Die echte Platine ist kleiner als der Plan, trotz doppelstöckiger Bestückung ist dort kein Platz. Schaltung unter [Relaistreiber](#relaistreiber).
+- **RS485-Module (VE.Bus und Packs):** Auf den Modulen sitzt ein MS2548 von Ruimeng, kein MAX13487. 
+- Der MS2548 schaltet die Richtung selbst: D low treibt den Bus low, D high treibt kurz high und gibt dann frei. Den Ruhezustand halten Pull-up an A und Pull-down an B, die er laut Datenblatt braucht. 
+  - **TJA1050 (CAN):** ohne Quarz, der S3 hat TWAI. Das Modul bringt einen 120-Ω-Abschluss mit, auf dem Bus sind nur zwei erlaubt.
+- Die Relaistreiber stehen nicht im Lochraster-Plan: Die echte Platine ist kleiner als der Plan, trotz doppelstöckiger Bestückung ist dort kein Platz. Schaltung unter [Relaistreiber](#relaistreiber). 
 
 ## Relaistreiber
 
@@ -113,8 +112,8 @@ Zwei 5-V-Relais von Finder, je mit einem AO3402, der die Spule nach GND schaltet
           ┌───────┤
           │       │
    Diode  ▲     Spule
- Kathode  │       │
- an +5V   │       │
+          │       │
+          │       │
           └───────┤
                   │
                   D
@@ -127,14 +126,9 @@ GPIO ──┬── 100 Ω ─ G   AO3402
 
 | Teil | Wert | Wozu |
 |---|---|---|
-| Schalter | AO3402 von AOS, SOT-23 | Laut Datenblatt höchstens 85 mΩ bei 2,5 V Gate-Spannung, Schwelle höchstens 1,5 V. Der GPIO liefert 3,3 V. |
-| Gate-Widerstand | 100 Ω, GPIO zum Gate | begrenzt den Umladestrom des Gates |
-| Pull-down | 10 kΩ, Gate nach GND | hält das Relais aus, solange der GPIO beim Start nicht getrieben ist |
+| Schalter | AO3402 von AOS, SOT-23 | Laut Datenblatt höchstens 85 mΩ bei 2,5 V Gate-Spannung, Der GPIO liefert 3,3 V. |
 | Freilaufdiode | 1N4007 oder 1N4148 parallel zur Spule, Kathode an +5 V | nimmt die Abschaltspitze der Spule auf |
-| Spule | an der 5-V-Schiene | ihr Strom kommt zur Last der 5-V-Einspeisung dazu |
 
-- Bei 100 mA Spulenstrom fallen am AO3402 rund 9 mV ab, die Wärme bleibt unter 1 mW. Er braucht keine Kühlfläche.
-- Andere Hersteller und eine ältere AOS-Fassung nennen bis zu 110 mΩ. Bei diesem Strom spielt das keine Rolle.
 - Hat der Finder-Sockel schon eine Schutzdiode, entfällt die externe. Dann + und − an der Spule richtig anschließen.
 - SOT-23 sitzt auf einem Adapter auf 2,54 mm. Belegung von oben laut Datenblatt: D allein oben, G links unten, S rechts unten.
 - Nicht genommen: 2N7000, MTD3055VL, BUK9225-55A und BUK9226-75A nennen ihren Widerstand erst ab 4,5–5 V Gate-Spannung, an 3,3 V ist er nicht garantiert. Der VN610SP ist ein High-Side-Schalter und braucht mindestens 5,5 V. Das Modul HW-532 (PC817 und MOSFET) gibt dem Gate nur die halbe Lastspannung, an 5 V also rund 2,5 V.
