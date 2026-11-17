@@ -23,7 +23,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 | `solarcharger.ttyUSB7` | 292 | BlueSolar MPPT 100/20 48V | USB |
 | `battery.ttyUSB8` | 291 | SmartShunt IP65 300A | USB |
 | `battery.socketcan_can1` | 512 | JK-BMS | CAN |
-| `grid.ve_TM974E88` | 40 | Tasmota als VM-3P75CT | Modbus UDP 192.168.1.33 |
+| `grid.ve_TM974E88` | 40 | Netzzähler MT681 | optischer Lesekopf, SML seriell 9600 Baud an Tasm_Kellercenter2. Venus liest per Modbus UDP von 192.168.1.33, `victron_meter.be` gibt den Tasmota als Victron-Zähler VM-3P75CT aus |
 | `pvinverter.http_34`, `inverter.http_34` | 34 | Hoymiles HMS-1600 (Garage) und HMS-2000 (WP) | Funk über den CMT2300A der OpenDTU und der OpenDTU-OnBattery, Venus liest per HTTP (`dbus-opendtu_Garage`, `dbus-opendtu_WP`) |
 | `pvinverter.mqtt_pv_100` | 100 | Growatt MIC, über `dbus-mqtt-pv` | MQTT |
 
@@ -244,7 +244,7 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 - Baudrate am RS485 des JK-BMS.
 - MS2548 an VE.Bus über Stunden: Anteil quittierter Befehle, Signal an A–B mit dem Oszilloskop.
 - Vorzeichen der AC-out-Leistung des MultiPlus (RAM 16).
-- Versorgung über die COM-Buchse: Die Diode ist vermutlich defekt. Ohne sie kein CH348, also keine MPPT und kein SmartShunt.
+- Versorgung über die COM-Buchse geht nicht mehr, vermutlich ist dort die Diode defekt.
 - GND am CAN- und RS485-Port des JK-BMS gegen B− messen, dazu VE.Bus Pin 3 gegen DC− des MP2. Ist ein Port schon getrennt, entfällt dort die Trennung.
 - Der CH348 nach einem Neustart des S3: weiter beobachten.
 

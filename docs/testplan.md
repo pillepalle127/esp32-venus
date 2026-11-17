@@ -19,7 +19,7 @@ Erledigt seit 15.11.: A6c, B4, B3 und der erste Test mit Senden am MultiPlus (C1
 | 5 | C1 Ausfälle: MT681 ab (Batterie ruht), CAN ab (Grenzen 0), Neustart ESP_venus (Zeit bis Passthrough messen) | Anlage | wie 1 |
 | 6 | C1 Dauerlauf: gesendet/quittiert und Prüfsummenfehler über Stunden, einmal A–B beim Senden mit dem Oszilloskop | Anlage | wie 1 |
 | 7 | CAN 0x305/0x307 ans BMS senden, wie bisher Venus. Vorher prüfen, ob das BMS ohne sie auf Dauer etwas meldet | Anlage | Firmware |
-| 8 | A1 Versorgung: Diode am COM ersetzen oder andere Lösung. Ohne sie kein CH348, also keine MPPT und kein SmartShunt | Tisch | – |
+| 8 | A1 Versorgung: Diode am COM ersetzen oder andere Lösung | Tisch | – |
 | 9 | B5 VE.Direct, die übrigen MPPT und der SmartShunt, danach DVCC | Anlage | 8 |
 | 10 | Entscheidung SoC-Quelle für Regelung und Mindest-SoC: SmartShunt (wie heute Venus) oder BMS | – | 9 |
 | 11 | Werte an ioBroker über MQTT, wie heute von Tasmota und Venus. Bisher veröffentlicht ESP_venus nichts | – | Firmware |
