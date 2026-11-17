@@ -24,7 +24,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 | `battery.ttyUSB8` | 291 | SmartShunt IP65 300A | USB |
 | `battery.socketcan_can1` | 512 | JK-BMS | CAN |
 | `grid.ve_TM974E88` | 40 | Tasmota als VM-3P75CT | Modbus UDP 192.168.1.33 |
-| `pvinverter.http_34` | 34 | `henne49_dbus-opendtu` | HTTP |
+| `pvinverter.http_34`, `inverter.http_34` | 34 | Hoymiles HMS-1600 (Garage) und HMS-2000 (WP) | Funk über den CMT2300A der OpenDTU und der OpenDTU-OnBattery, Venus liest per HTTP (`dbus-opendtu_Garage`, `dbus-opendtu_WP`) |
 | `pvinverter.mqtt_pv_100` | 100 | Growatt MIC, über `dbus-mqtt-pv` | MQTT |
 
 - DVCC ist aktiv.
