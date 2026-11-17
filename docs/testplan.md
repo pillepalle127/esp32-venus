@@ -167,7 +167,8 @@ Voraussetzung: A1 bis A3 erledigt. Ablauf und Anschlussart stehen in [PLAN.md, P
 | B1 MT681 Haus | 14.11.2026 | in Ordnung | GPIO 7 (getauscht wie verdrahtet), 124 Telegramme in 124 s, 0 CRC-Fehler. Ob parallel zum Tasmota, habe ich nicht notiert. |
 | B2 MT681 WP | 14.11.2026 | in Ordnung | GPIO 6 per RMT, 34 Telegramme, 0 CRC-Fehler, 0 Rahmenfehler. |
 | B3 CAN am JK-BMS | | | |
-| B4 VE.Bus am MultiPlus | | | |
+| B4 VE.Bus am MultiPlus | 17.11.2026 | abgebrochen | An der zweiten VE.Bus-Buchse eingesteckt, Firmware „nur hören“: Der MultiPlus ging sofort auf Störung. Ich hatte die 100 kΩ vorher nicht messen lassen. Danach am Modul gemessen: GND–A 6,3 kΩ, GND–B 4,5 kΩ, A–B 10 kΩ, also weit unter 100 kΩ. Auf dem Modul sitzt ein Pull-up an A und ein Pull-down an B. Beide müssen vor dem nächsten Versuch runter. |
+| B4 VE.Bus am MultiPlus | 17.11.2026 | in Ordnung | Pull-up und Pull-down am Modul entfernt, der MultiPlus läuft mit ESP_venus am Bus. Zuerst kein Sync: Im Rohmitschnitt (RS485-Test, 256000 Baud) lag RX in Ruhe low und Frames kamen als `00 3E 3E` statt `FF 83 83`, A und B waren vertauscht. Nach dem Tausch: Frames `83 83 FD …`/`83 83 FE … FF`, rund 80 pro Sekunde. Im Modus „nur hören“: Sync ja, Prüfsummenfehler 0, DC-Strom 0,0–0,1 A, Temperatur 13 °C, Eingangsstromgrenze 25 A (Bereich 0–50 A). Werte stimmen mit Venus überein, Venus ohne VE.Bus-Fehler. |
 | B5 VE.Direct | 14.11.2026 | ein MPPT in Ordnung | Port 0, `HQ2503KHTNV` = solarcharger 294, 27 Blöcke ohne Prüfsummenfehler. RX und TX waren zuerst gekreuzt. |
 | B6 JK-BMS über RS485 | | | |
 | B7 Regelung WP-HMS | | | |
