@@ -8,7 +8,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 
 1. Den Pi ersetzen (`raspberrypi2`, 192.168.1.10).
 2. Den Netzzähler gleich mit übernehmen (MT681, heute `victron_meter.be` auf Tasm_Kellercenter2). Später ziehen auch Lüfter und BME280 um, dann entfällt der Tasmota ganz.
-3. Zum Schluss zwei OpenDTU und damit zwei Wechselrichter ersetzen: die OpenDTU (HMS Garage) und die OpenDTU-OnBattery (DTUoB_WP).
+3. Zum Schluss die zwei ESP32-S3 ersetzen, die heute parallel laufen: die OpenDTU-OnBattery (DTUoB_WP) regelt den WP-HMS, die OpenDTU (HMS Garage) liefert nur Werte. Die Wechselrichter bleiben.
 
 ## Anlage laut Venus (02.11.2026)
 
@@ -35,7 +35,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 
 ## Entscheidungen
 
-- Ein ESP32-S3 für alles. Durch die Streuung rechne ich nicht mit mehr Verfügbarkeit, wenn ich aufteile.
+- Ein ESP32-S3 für alles.
 - Die FT4232 ersetze ich durch einen CH348. Der läuft allerdings nicht an Venus.
 - Von OpenDTU-OnBattery nutze ich nur Überwachung und Steuerung des Hoymiles HMS zur Einspeisung. Es ist deshalb keine Basis für dieses Projekt.
 - VRM fällt weg. Der VRM-Prognosevergleich endet dann vermutlich mit dem Umschalten.
@@ -76,10 +76,10 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 - Zum JK-BMS laufen zwei Wege. **CAN steuert:** Ladegrenzen, Alarme, SoC, beide Packs zusammengefasst, ohne CAN keine DVCC-Vorgaben. **RS485 zeigt an:** einzelne Zellspannungen, die Regelung hängt nicht daran.
 - Der Netzzähler bleibt am eigenen UART, er liefert das Regelsignal fürs ESS. Der zweite MT681 läuft per RMT als Empfangs-UART. Die Zellspannungen beider Packs laufen über den SC16IS752, UART0 bleibt Konsole.
 - Welcher MPPT an welchem Port hängt, spielt keine Rolle: Die Firmware erkennt jedes Gerät an seiner Seriennummer und gibt ihm die Instanz von heute.
-- GPIO 3 und 46 sind Strapping-Pins und tragen nur Signale des CMT2300A, die beim Start niemand treibt. GPIO 46 muss beim Reset low sein, sonst gibt es keinen Download-Modus. Der interne Pull-down hält ihn low, SCLK ist am CMT2300A ein Eingang. GPIO 3 wirkt nach meiner Erinnerung nur mit gesetzter eFuse und dann nur auf die Wahl der JTAG-Quelle.
+- GPIO 3 und 46 sind Strapping-Pins und tragen nur Signale des CMT2300A, die beim Start niemand treibt. GPIO 46 muss beim Reset low sein, sonst gibt es keinen Download-Modus. Der interne Pull-down hält ihn low, SCLK ist am CMT2300A ein Eingang. GPIO 3 wirkt laut Datenblatt (Tabelle 3-5) nur, wenn die eFuse `STRAP_JTAG_SEL` gesetzt ist, und dann nur auf die Wahl der JTAG-Quelle.
 - Ins Netz geht der S3 über sein WLAN. Ein Ausfall trifft nur die Verbindung zu ioBroker, nicht die Regelung.
 - VE.Bus braucht einen UART am S3: Alle 20 ms kommt ein Sync-Frame, gesendet wird nur in einem engen Fenster danach.
-- Beide HMS laufen über ein CMT2300A. 
+- Beide HMS laufen über ein CMT2300A.
 
 ## Trennung und Transceiver
 
@@ -88,14 +88,17 @@ Lochraster-Plan: [docs/layout_lochraster.drawio](docs/layout_lochraster.drawio),
 Eigene Platine, Plan mit Steckverbindungen und Blockdiagramm: [docs/platine.md](docs/platine.md).
 
 - Die BMS schalten im Minus-Zweig. Hängt der S3 ohne Trennung an zwei Stellen, überbrückt seine Masse einen offenen BMS-Schalter. Ich trenne deshalb VE.Bus, CAN und RS485, jeweils an TX und RX, mit ADuM1201 und einem eigenen B0505S-1W je Busseite. GND bleibt am Bus.
-- Das ist eine Funktionstrennung gegen rund 60 V, kein Schutz vor Netzspannung. Prüfungen mit kV schaden: Der ADuM1201 ist für 2500 V rms über 1 Minute ausgelegt (Datenblatt, Tabelle 10). Es reicht der Durchgangstest.
-- Der ADuM1201 hängt auf der S3-Seite an 3,3 V, auf der Busseite an den 5 V des B0505S. 
-- Der B0505S ist ungeregelt. Der MS2548 braucht laut Datenblatt 4,5–5,5 V, der TJA1050 nach meiner Erinnerung 4,75–5,25 V. Ist die Spannung bei wenig Last zu hoch, hilft ein Lastwiderstand: 250 Ω sind 10 % Last.
+- Das ist eine Funktionstrennung gegen rund 60 V, kein Schutz vor Netzspannung. Laut Datenblatt halten der ADuM1201 2500 V rms für 1 Minute (Tabelle 10) und der B0505S 1500 V DC für 1 Minute. Der Lochrasteraufbau ist für solche Spannungen nicht ausgelegt. Ich prüfe deshalb nur auf Durchgang.
+- Der ADuM1201 hängt auf der S3-Seite an 3,3 V, auf der Busseite an den 5 V des B0505S.
+- Der B0505S-1WR3 macht aus 5 V (4,5–5,5 V) wieder 5 V, höchstens 200 mA (1 W), mindestens 20 mA Last, Wirkungsgrad 78–82 % (Datenblatt). Er ist ungeregelt. Der MS2548 braucht laut Datenblatt 4,5–5,5 V, der TJA1050 4,75–5,25 V, darunter sendet er nicht (Datenblatt NXP). Ist die Spannung bei wenig Last zu hoch, hilft ein Lastwiderstand: 250 Ω sind 10 % Last.
 - Der ADuM1201AR reicht für CAN: rund 0,8 µs Laufzeit im schlechtesten Fall, der S3 tastet nach 1,6 µs ab. Der Selbsttest am Tisch lief fehlerfrei.
-- **RS485-Module (VE.Bus und Packs):** Auf den Modulen sitzt ein MS2548 von Ruimeng, kein MAX13487. 
-- Der MS2548 schaltet die Richtung selbst: D low treibt den Bus low, D high treibt kurz high und gibt dann frei. Den Ruhezustand halten Pull-up an A und Pull-down an B, die er laut Datenblatt braucht. 
-  - **TJA1050 (CAN):** ohne Quarz, der S3 hat TWAI. Das Modul bringt einen 120-Ω-Abschluss mit, auf dem Bus sind nur zwei erlaubt.
-- Die Relaistreiber stehen nicht im Lochraster-Plan: Die echte Platine ist kleiner als der Plan, trotz doppelstöckiger Bestückung ist dort kein Platz. Schaltung unter [Relaistreiber](#relaistreiber). 
+- **RS485-Module (VE.Bus und Packs):** Auf den Modulen im Lochraster sitzt ein MS2548 von Ruimeng, kein MAX13487. Die eigene Platine nimmt das kleine Modul mit MAX13487 („RS485 V2.05“), siehe [docs/platine.md](docs/platine.md#busseiten).
+- Der MS2548 schaltet die Richtung selbst: D low treibt den Bus low, D high treibt kurz high und gibt dann frei. Den Ruhezustand halten Pull-up an A und Pull-down an B, die er laut Datenblatt braucht.
+- An VE.Bus müssen Pull-up und Pull-down runter. Mit ihnen lag der Bus bei 4,5–10 kΩ, der MultiPlus ging beim Einstecken auf Störung (17.11.2026). Ohne sie empfängt und sendet der MS2548 an VE.Bus: Sync, 0 Prüfsummenfehler, jeder ESS-Befehl quittiert.
+- **TJA1050 (CAN):** Der S3 hat einen eigenen CAN-Controller, bei Espressif heißt er TWAI (Two-Wire Automotive Interface, CAN 2.0 nach ISO 11898-1). Er braucht nur einen Transceiver, keinen MCP2515 mit Quarz wie am Pi. Die Firmware läuft im Normalbetrieb: Sie quittiert jeden Frame, sendet aber keine eigenen. Listen-only reicht nicht, wenn sonst niemand quittiert. Dann wiederholt das BMS seinen ersten Frame endlos (17.11.2026).
+- Das TJA1050-Modul bringt einen 120-Ω-Abschluss mit. Auf dem Bus sind genau zwei erlaubt, je einer an jedem Ende. Ersetzt ESP_venus Venus am Busende, bleibt er dran.
+- Auf der eigenen Platine sitzt das TJA1050-Modul links unter den Packs, gedreht, Stecker X5 (1 GND, 2 CANH, 3 CANL). Layout: [docs/platine.md](docs/platine.md#layout).
+- Die Relaistreiber stehen nicht im Lochraster-Plan: Die echte Platine ist kleiner als der Plan, trotz doppelstöckiger Bestückung ist dort kein Platz. Schaltung unter [Relaistreiber](#relaistreiber).
 
 ## Relaistreiber
 
@@ -126,12 +129,13 @@ GPIO ──┬── 100 Ω ─ G   AO3402
 
 | Teil | Wert | Wozu |
 |---|---|---|
-| Schalter | AO3402 von AOS, SOT-23 | Laut Datenblatt höchstens 85 mΩ bei 2,5 V Gate-Spannung, Der GPIO liefert 3,3 V. |
+| Schalter | AO3402 von AOS, SOT-23 | Laut Datenblatt höchstens 85 mΩ bei 2,5 V Gate-Spannung. Der GPIO liefert 3,3 V. |
 | Freilaufdiode | 1N4007 oder 1N4148 parallel zur Spule, Kathode an +5 V | nimmt die Abschaltspitze der Spule auf |
 
 - Hat der Finder-Sockel schon eine Schutzdiode, entfällt die externe. Dann + und − an der Spule richtig anschließen.
 - SOT-23 sitzt auf einem Adapter auf 2,54 mm. Belegung von oben laut Datenblatt: D allein oben, G links unten, S rechts unten.
 - Nicht genommen: 2N7000, MTD3055VL, BUK9225-55A und BUK9226-75A nennen ihren Widerstand erst ab 4,5–5 V Gate-Spannung, an 3,3 V ist er nicht garantiert. Der VN610SP ist ein High-Side-Schalter und braucht mindestens 5,5 V. Das Modul HW-532 (PC817 und MOSFET) gibt dem Gate nur die halbe Lastspannung, an 5 V also rund 2,5 V.
+- Eigene Platine: Q1 und Q2 (AO3402), Gate-Widerstand R5 und R7, Pull-down R6 und R8, Freilaufdiode D1 und D2. Stecker X6 (Lüfter) und X7 (Relais 2), je 1 +5V, 2 Schalter. Sie sitzen unter der nativen USB-Buchse des S3. Layout: [docs/platine.md](docs/platine.md#layout).
 - Firmware: Nach dem Start bleiben GPIO 11 und 12 Eingang, erst ein Knopf auf der Seite macht sie zum Ausgang. Test A10 im [Testplan](docs/testplan.md).
 
 ## DVCC
@@ -150,15 +154,14 @@ Am 04.11.2026 gesehen ([Mitschnitt](docs/venus_mppt_0v_2026-11-04.txt)): Ohne Ne
 ## Software
 
 - Firmware in `firmware/`: PlatformIO mit Arduino 3.3.12 auf ESP-IDF 5.5.5 (`pioarduino`). Der USB-Treiber braucht ein aktuelles IDF, und beide Bibliotheken bauen auf Arduino auf.
-- VE.Bus: `ve.bus-library` (MIT). Getestet auf LilyGo T-CAN485, der S3 ist nicht bestätigt.
+- VE.Bus: `ve.bus-library` (MIT). Läuft am S3 mit dem MultiPlus: Mithören und ESS-Sollwert senden (17.11.2026).
 - Hoymiles: `lib/Hoymiles` aus OpenDTU, laut Dateiköpfen GPL-2.0-or-later. Herkunft der fremden Bibliotheken: `firmware/lib/README.md`. Der CH348-Treiber liegt in `firmware/lib/ch348/`.
 - Neu: VE.Direct, SML, JK-BMS über CAN, DVCC, ESS-Regelung, Stützung der Wärmepumpe, MQTT, Webseite.
 - Aus `victron_meter.be` übernehmen: Der MT681 hat keinen Einspeisezähler (2.8.0), die Einspeisung wird integriert und alle 10 min gesichert. Der Zähler ist einphasig auf L1 abgebildet.
 
 ioBroker soll nichts merken: gleiche Adresse 192.168.1.10:1883, Benutzer `remoteconsole`, Portal-ID `b827ebc35935`, gleiche Themen, Werte als `{"value": x}`. Dazu braucht der S3 einen eigenen MQTT-Broker.
-- Lesen: 38 N-Themen, die Bereiche stehen in `~/projects/Kellerlüftung/mqtt1_abo.txt`.
+- Lesen: 38 N-Themen, die Bereiche stehen in `~/projects/Kellerlüftung/mqtt1_abo.txt`. Noch nicht umgesetzt: Die Firmware veröffentlicht bisher nichts.
 - Schreiben: `AcPowerSetPoint`, `vebus.288.Mode`, `BatteryLife/State`.
-- Dazu die Werte, die heute der Tasmota an ioBroker schickt (`MT681_Power_cur`, `MT681_Total_in`, `VIC`).
 - `mqtt_pv_100` ist der Growatt MIC. Venus bindet ihn mit [venus-os_dbus-mqtt-pv](https://github.com/mr-manuel/venus-os_dbus-mqtt-pv) ein: höchstens 1600 W, AC-Eingang 1, Topic `Growatt_fake/power` am Broker 192.168.1.4. Kommt 60 s nichts, beendet sich der Treiber. Das Topic schreibt das ioBroker-Skript `script.js.common.Photovoltaik` (Adapter `javascript.0`), mit `power`, `current` und `energy_forward`. Das muss weiter ankommen.
 
 ## VE.Bus laut Quellen (nicht von mir gemessen)
@@ -168,16 +171,17 @@ ioBroker soll nichts merken: gleiche Adresse 192.168.1.10:1883, Benutzer `remote
 - Der ESS-Sollwert muss spätestens alle 60 s kommen, sonst geht der MultiPlus in Passthrough.
 - Vor OTA oder Neustart den Bus stumm schalten (`setTxEnabled(false)`).
 - esp32ess läuft auf einem MultiPlus-II 48/5000 mit Firmware v502 (meiner: v508) und kann nur ein Gerät (einphasig). Es meldet 1–2 % fehlgeschlagene Befehle, die wiederholt werden.
-- Der Bus muss hochohmig bleiben, über 100 kΩ, sonst schaltet sich das Victron-Gerät ab.
+- Der Bus muss hochohmig bleiben, über 100 kΩ, sonst schaltet sich das Victron-Gerät ab. Bei mir am 17.11.2026 so passiert, siehe oben.
 - USB des ESP32 und MultiPlus nie gleichzeitig anschließen (README von PepeTheFroggie).
 
 ## Stand
 
 - **CH348 (03.11.2026):** am S3 erkannt, Schleifentest über alle 8 Ports 92 min ohne Fehler, 55,2 MB.
 - **VE.Bus-Timing (03.11.2026):** Ein zweiter S3 spielt den MultiPlus. 9000 von 9000 Antworten, Beginn 8,95–10,53 ms nach dem Sync. Unter künstlicher Last Core 1 bei 5 %, Core 0 bei rund 50 %. Ob ein echter MultiPlus diese Zeitpunkte annimmt, zeigt erst Phase 2.
-- **Testfirmware (Env `s3`, 14.11.2026):** Eine Webseite zeigt, was an den Anschlüssen ankommt: `http://<IP>/` oder `http://esp32-venus.local/`. Gesendet wird nur auf Knopfdruck (RS485-Test, CAN-Selbsttest), sonst hört der S3 nur zu. Die Seite hat keine Anmeldung. Das WLAN steht in `firmware/src/wifi_secrets.h`, nicht im Repo. Die alte Gesamtfirmware mit CH348-Schleifentest baut als Env `s3_timing` aus `firmware/timing/`.
+- **Testfirmware (Env `s3`, 14.11.2026):** Eine Webseite zeigt, was an den Anschlüssen ankommt: `http://<IP>/` oder `http://esp32-venus.local/`. Gesendet wird nur auf Knopfdruck (RS485-Test, CAN-Selbsttest) und im Reiter „ESS MultiPlus“ mit „Senden ein“. Auf CAN quittiert der S3 nur. Die Seite hat keine Anmeldung. Das WLAN steht in `firmware/src/wifi_secrets.h`, nicht im Repo. Die alte Gesamtfirmware mit CH348-Schleifentest baut als Env `s3_timing` aus `firmware/timing/`.
 - **Am Tisch geprüft (14.11.2026):** beide BME280, beide MT681 am echten Zähler (RMT ohne Rahmenfehler), CAN-Kette per Selbsttest, CH348 mit einem MPPT, Isolation, TX-Pegel bei Reset. Die linke RS485-Kette ist noch offen.
 - **Plan (15.11.2026):** Rechts sitzen jetzt der SC16IS752 und darunter die beiden RS485 zu den Packs, die E-Paper-Stiftleiste entfällt. Draht- und Netzliste geprüft.
+- **An der Anlage (17.11.2026):** RS485 über Kreuz in allen Richtungen, VE.Bus am MultiPlus (hören und senden), CAN am JK-BMS, erster Test der ESS-Regelung mit Nulleinspeisung. Ergebnisse unter C1 im [Testplan](docs/testplan.md).
 - **Bekannt:** Nach einem Neustart des S3 meldet sich der CH348 nur, wenn er selbst kurz ohne Strom war. Im Fritz-Mesh muss der S3 den stärksten Zugangspunkt wählen, das tut die Firmware jetzt.
 
 ## Kabelwege und Platz des S3
@@ -216,7 +220,7 @@ Rohdaten: [docs/venus_can_seriennummern_2026-11-03.txt](docs/venus_can_seriennum
 
 - 15 Zellen in Reihe je Pack.
 - Die wirksame Ladespannung ist heute 51,8 V vom BMS, unter der Grenze von 52,0 V aus Venus. Beim Ladestrom gilt die Grenze aus Venus: 120 A statt 161,5 A vom BMS.
-- `305` und `307` sehen nach dem Lebenszeichen des Wechselrichters ans BMS aus. Fallen sie weg, wenn der Pi aus ist, muss sie der S3 senden. Dann kann er auf dem CAN-Bus nicht bei Listen-only bleiben.
+- `305` und `307` kommen von Venus, als Lebenszeichen ans BMS. Am 17.11.2026 hing nur ESP_venus am CAN: Das BMS sendete ohne sie weiter. Ob es auf Dauer etwas meldet, ist offen. Wenn ja, sendet der S3 sie.
 - Einzelne Zellspannungen stehen nicht auf dem CAN-Bus, nur Minimum und Maximum.
 
 ## Geräte an VE.Direct
@@ -238,7 +242,9 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 - Die DVCC- und ESS-Einstellungen, die der S3 übernehmen muss.
 - Einzelzellen: DTUoB_WP (192.168.1.30, `OpenDTU-WP-0DB714`) liest per RS485 nur ein Pack, laut ioBroker am 14.11.2026 Adresse 1, 15 Zellen, 220 Ah. CAN meldet 440 Ah und 2 Module. Deshalb bekommt jedes Pack einen eigenen RS485 am SC16IS752. Laut esphome-jk-bms ist je Modbus-Bus nur ein Master erlaubt, und ein BMS mit Adresse 0 ist selbst Master.
 - Baudrate am RS485 des JK-BMS.
-- MS2548 an VE.Bus: ob er bei 256000 Baud schnell genug umschaltet und wie stark Pull-up und Pull-down des Moduls den Bus belasten. Laut esp32ess muss VE.Bus über 100 kΩ bleiben.
+- MS2548 an VE.Bus über Stunden: Anteil quittierter Befehle, Signal an A–B mit dem Oszilloskop.
+- Vorzeichen der AC-out-Leistung des MultiPlus (RAM 16).
+- Versorgung über die COM-Buchse: Die Diode ist vermutlich defekt. Ohne sie kein CH348, also keine MPPT und kein SmartShunt.
 - GND am CAN- und RS485-Port des JK-BMS gegen B− messen, dazu VE.Bus Pin 3 gegen DC− des MP2. Ist ein Port schon getrennt, entfällt dort die Trennung.
 - Der CH348 nach einem Neustart des S3: weiter beobachten.
 
@@ -268,6 +274,16 @@ Die Firmware erkennt die Geräte an der Seriennummer (`firmware/src/devices.h`).
 - [ESP-IDF: USB Host](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/peripherals/usb_host.html)
 - [ESPHome: USB Host](https://esphome.io/components/usb_host/)
 - [tbnobody/OpenDTU](https://github.com/tbnobody/OpenDTU)
+- [hoylabs/OpenDTU-OnBattery](https://github.com/hoylabs/OpenDTU-OnBattery)
+- [nRF24/RF24](https://github.com/nRF24/RF24)
+- [pioarduino/platform-espressif32](https://github.com/pioarduino/platform-espressif32)
+- [henne49/dbus-opendtu](https://github.com/henne49/dbus-opendtu)
+- [mr-manuel/venus-os_dbus-mqtt-pv](https://github.com/mr-manuel/venus-os_dbus-mqtt-pv)
+- [syssi/esphome-jk-bms](https://github.com/syssi/esphome-jk-bms)
+- [ArminJo/JK-BMSToPylontechCAN](https://github.com/ArminJo/JK-BMSToPylontechCAN)
+- [JK-BMS CAN-Protokoll V1.02](http://www.jk-bms.com/Upload/2022-05-19/1619062896.pdf)
+- [ESP-IDF: TWAI](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/peripherals/twai.html)
+- [TJA1050 Datenblatt (NXP)](https://www.nxp.com/docs/en/data-sheet/TJA1050.pdf)
 - [ESP32-S3 Datenblatt](https://documentation.espressif.com/esp32-s3_datasheet_en.pdf)
 - [MS2548 Datenblatt (Ruimeng, chinesisch)](https://www.ftelectronic.com/Public/Upload/news/20231228/658d3c0d6c997.pdf)
 - [MS2548 bei LCSC](https://www.lcsc.com/product-detail/C42415856.html)
