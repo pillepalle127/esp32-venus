@@ -85,6 +85,8 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 
 Lochraster-Plan: [docs/layout_lochraster.drawio](docs/layout_lochraster.drawio), Belegung der Stiftleisten: [docs/layout_lochraster.md](docs/layout_lochraster.md).
 
+Eigene Platine, Plan mit Steckverbindungen und Blockdiagramm: [docs/platine.md](docs/platine.md).
+
 - Die BMS schalten im Minus-Zweig. Hängt der S3 ohne Trennung an zwei Stellen, überbrückt seine Masse einen offenen BMS-Schalter. Ich trenne deshalb VE.Bus, CAN und RS485, jeweils an TX und RX, mit ADuM1201 und einem eigenen B0505S-1W je Busseite. GND bleibt am Bus.
 - Das ist eine Funktionstrennung gegen rund 60 V, kein Schutz vor Netzspannung. Prüfungen mit kV schaden: Der ADuM1201 ist für 2500 V rms über 1 Minute ausgelegt (Datenblatt, Tabelle 10). Es reicht der Durchgangstest.
 - Der ADuM1201 hängt auf der S3-Seite an 3,3 V, auf der Busseite an den 5 V des B0505S. Kanal A läuft von Seite 2 nach Seite 1, Kanal B umgekehrt. Auf dem Modul heißt die Ziffer 1 Eingang und 0 Ausgang. Bei CAN zeigt Seite 1 zum S3. Bei VE.Bus und den beiden Packs zeigt Seite 2 zum RS485-Modul, U2, A1, B0 und G2 liegen in den Reihen von VCC, TXD, RXD und GND und gehen gerade hinüber. Dafür sind diese drei ADuM gewendet, ihre Bauteilseite zeigt andersherum als bisher. TXD des Moduls (sein Ausgang) geht auf A1, A0 an den RX des S3 bzw. SC16IS752. Der TX kommt auf B1, B0 geht an RXD des Moduls (sein Eingang). Pack 1 hängt an UART B, Pack 2 an UART A, die Wege liegen ineinander, ohne Kreuzung. Jedes Pack hat seine eigene Trennung, eine gemeinsame würde ihre Massen über den SC16IS752 verbinden.

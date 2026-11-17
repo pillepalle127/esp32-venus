@@ -1,0 +1,26 @@
+G04 #@! TF.GenerationSoftware,KiCad,Pcbnew,7.0.11+dfsg-1build4*
+G04 #@! TF.CreationDate,2026-11-17T14:22:02+00:00*
+G04 #@! TF.ProjectId,esp_venus_klein_usbfrei,6573705f-7665-46e7-9573-5f6b6c65696e,rev?*
+G04 #@! TF.SameCoordinates,Original*
+G04 #@! TF.FileFunction,Profile,NP*
+%FSLAX46Y46*%
+G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
+G04 Created by KiCad (PCBNEW 7.0.11+dfsg-1build4) date 2026-11-17 14:22:02*
+%MOMM*%
+%LPD*%
+G01*
+G04 APERTURE LIST*
+G04 #@! TA.AperFunction,Profile*
+%ADD10C,0.100000*%
+G04 #@! TD*
+G04 APERTURE END LIST*
+D10*
+X0Y-100000000D02*
+X0Y0D01*
+X100000000Y0D02*
+X100000000Y-100000000D01*
+X100000000Y-100000000D02*
+X0Y-100000000D01*
+X0Y0D02*
+X100000000Y0D01*
+M02*
