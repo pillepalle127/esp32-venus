@@ -2,8 +2,6 @@
 
 Ich will die Funktionen von Venus OS, die ich nutze, auf einem ESP32-S3 nachbauen. Eine Portierung geht nicht: Venus OS ist eine Linux-Distribution, und ein kompletter Build braucht private Repos von Victron.
 
-Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](docs/testplan.md). Ausführliche Protokolle: [docs/tests.md](docs/tests.md).
-
 ## Ziel
 
 1. Den Pi ersetzen (`raspberrypi2`, 192.168.1.10).
