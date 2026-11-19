@@ -118,6 +118,8 @@ def main():
     ap.add_argument("--senden", action="store_true", help="wirklich anmelden und veröffentlichen")
     ap.add_argument("--spiegel", help="Test: Themenliste des Pi (TSV: Pfad, Anzahl, Retain, Inhalt) "
                                       "zusätzlich alle 30 s veröffentlichen")
+    ap.add_argument("--mqtt311", action="store_true",
+                    help="MQTT 3.1.1 statt 5 (Test, ob esp-mqtt in der Firmware reicht)")
     ap.add_argument("--dauer", type=int, default=600, help="Sekunden, dann trennen (Standard 600)")
     args = ap.parse_args()
 
@@ -180,7 +182,9 @@ def main():
     # Wie die Brücke von flashmq in Venus v3.75 (data/conf/flashmq.d/vrm_bridge.conf):
     # MQTT 5, Bridge-Bit, Client-ID mit Präfix GXdbus
     cid = "GXdbus_" + os.urandom(6).hex()
-    c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=cid, protocol=mqtt.MQTTv5)
+    proto = mqtt.MQTTv311 if args.mqtt311 else mqtt.MQTTv5
+    c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=cid, protocol=proto,
+                    **({"clean_session": True} if args.mqtt311 else {}))
     c.enable_bridge_mode()      # bridge_protocol_bit true wie in vrm_bridge.conf
     c.username_pw_set("ccgxapikey_" + pid, sec["mqtt_password"])
     c.tls_set(ca_certs=R.CA)
@@ -192,7 +196,7 @@ def main():
         cl.publish(f"N/{pid}/system/0/Serial", json.dumps({"value": pid}), retain=True)
 
     def on_connect(cl, ud, flags, rc, props=None):
-        log(f"verbunden mit {host}:443 als {cid}, Ergebnis {rc}")
+        log(f"verbunden mit {host}:443 als {cid}, MQTT {'3.1.1' if args.mqtt311 else '5'}, Ergebnis {rc}")
         if rc == 0:
             zustand["verbunden"] = True
             # N mit abonnieren: Kommt das Eigene zurück, nimmt der Broker die Themen an
@@ -250,7 +254,10 @@ def main():
 
     c.on_connect, c.on_disconnect, c.on_message = on_connect, on_disconnect, on_message
     c.reconnect_delay_set(min_delay=5, max_delay=60)
-    c.connect(host, 443, keepalive=60, clean_start=True)
+    if args.mqtt311:
+        c.connect(host, 443, keepalive=60)
+    else:
+        c.connect(host, 443, keepalive=60, clean_start=True)
     c.loop_start()
     # Werte für SENDDATA (c=1) zur selben Uhrzeit, wie in vrm_replay.py
     w_reihen = {}

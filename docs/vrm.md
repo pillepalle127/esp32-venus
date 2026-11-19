@@ -191,3 +191,5 @@ Das Dashboard von ESP_sim zeigt „Echtzeit“ und die MQTT-Werte. Nötig waren,
 Bis 12:00 offen: Das Dashboard blieb bis auf Verbrauch, Solar und Batterie leer; beim Pi zeigt es die Topologie mit allen Einzelwerten. Auch 4896 gespiegelte Venus-Themen des Pi und die Aufbau-Codes (`si1`, `shao`, `shai`, `st`, `AIS`, `vi0` …) haben daran nichts geändert. VRM führt ESP_sim noch mit `hasMains = 0` (Pi: 1).
 
 19.11.2026, gegen 12:01: Das Dashboard von ESP_sim zeigt die Topologie mit den Einzelwerten (Nutzer), VRM führt ESP_sim jetzt mit `hasMains = 1`. Davor: um 11:58 die Aufbau-Codes (`si1`, `si2`, `shao`, `shai`, `shd`, `sb`, `st`, `H4M`, `bol`, `rwgm` als CONFIGCHANGE, `abs`, `AIS`, `AIT`, `ini`, `ic0`, `id0`, `vi0`, `ist0`, `is0` mit SENDDATA), um 12:01 ein Neustart des Live-Skripts mit ANNOUNCE, Konfiguration und SENDDATA samt dieser Codes. Welcher Teil den Ausschlag gab und ob VRM nur Zeit brauchte, ist nicht getrennt geprüft. ESP_venus schickt alles davon.
+
+19.11.2026, 12:05: Live-Ansicht mit MQTT 3.1.1 und Bridge-Bit (`tools/vrm_live.py --mqtt311`): „Echtzeit“ und Topologie wie mit MQTT 5 (Nutzer). esp-mqtt in der Firmware (nur 3.1.1) reicht also.
