@@ -31,6 +31,8 @@
 
 static const int N = sizeof(VRM_TABELLE) / sizeof(VRM_TABELLE[0]);
 static const int ROH = VQ_ROH;      // längere Texte werden verworfen
+static const int PUFFER = 1024;     // esp-mqtt, Ein- und Ausgang
+static const int SUBSCRIBE_MAX = PUFFER - 64;
 
 struct Wert {
     char roh[ROH];
@@ -172,20 +174,31 @@ static void ereignis(void *, esp_event_base_t, int32_t id, void *data)
         verbunden_ms = millis();
         setze("verbunden, abonniere");
         logf("VRM-Quelle: verbunden mit %s, abonniere %d Themen", VRM_QUELLE_URI, N);
-        // In Gruppen abonnieren, ein SUBSCRIBE je 16 Themen
+        // In Gruppen abonnieren: höchstens 16 Themen und SUBSCRIBE_MAX Bytes je SUBSCRIBE.
+        // 16 lange Themen brauchten 1128 Bytes; die Nachricht passte nicht in den Puffer,
+        // danach kamen keine Werte und kein PINGRESP mehr (19.11.2026).
         static char themen[16][96];
         esp_mqtt_topic_t liste[16];
-        int k = 0;
+        int k = 0, bytes = 7, fehler = 0;
         for (int i = 0; i < N; i++) {
             snprintf(themen[k], sizeof(themen[k]), "N/%s/%s", VRM_QUELLE_ID, VRM_TABELLE[i].thema);
             liste[k].filter = themen[k];
             liste[k].qos = 0;
-            if (++k == 16 || i == N - 1) {
-                esp_mqtt_client_subscribe_multiple(e->client, liste, k);
+            bytes += 2 + strlen(themen[k]) + 1;
+            k++;
+            int naechstes = i + 1 < N ? 3 + 3 + strlen(VRM_QUELLE_ID) + 1 + strlen(VRM_TABELLE[i + 1].thema) : 0;
+            if (k == 16 || i == N - 1 || bytes + naechstes > SUBSCRIBE_MAX) {
+                if (esp_mqtt_client_subscribe_multiple(e->client, liste, k) < 0) {
+                    fehler++;
+                }
                 k = 0;
+                bytes = 7;
             }
         }
-        setze("verbunden, hört mit");
+        if (fehler) {
+            logf("VRM-Quelle: %d SUBSCRIBE nicht gesendet", fehler);
+        }
+        setze(fehler ? "verbunden, Abonnieren unvollständig" : "verbunden, hört mit");
         break;
     }
     case MQTT_EVENT_DATA: {
@@ -279,9 +292,10 @@ void vq_begin()
     cfg.credentials.authentication.password = VRM_QUELLE_PASS;
     cfg.session.keepalive = 60;
     cfg.network.reconnect_timeout_ms = 30000;
-    // Gemessen 19.11.2026: Stapel 3,1 kB benutzt; Nachrichten unter 300 Byte, SUBSCRIBE mit 16 Themen rund 800
-    cfg.buffer.size = 1024;
-    cfg.buffer.out_size = 1024;
+    // Gemessen 19.11.2026: Stapel 3,1 kB benutzt; Nachrichten unter 300 Byte. SUBSCRIBE
+    // wird oben auf SUBSCRIBE_MAX begrenzt.
+    cfg.buffer.size = PUFFER;
+    cfg.buffer.out_size = PUFFER;
     cfg.task.stack_size = 5120;
     client = esp_mqtt_client_init(&cfg);
     esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, ereignis, NULL);
