@@ -2,6 +2,7 @@
 // der RS485-Monitor, deshalb braucht es dafuer keine Sperren.
 #include <ESPmDNS.h>
 #include <esp_flash.h>
+#include <esp_memory_utils.h>
 #include <esp_ota_ops.h>
 #include <WebServer.h>
 #include <WiFi.h>
@@ -589,6 +590,29 @@ void web_begin()
     });
     server.on("/api/dev", HTTP_GET, handle_dev);
     // Log als Text, auch das vom Lauf vor dem letzten Neustart
+    server.on("/tasks.txt", HTTP_GET, []() {
+        // Stapel aller Tasks: Größe unbekannt, aber der nie benutzte Rest (High Water Mark)
+        UBaseType_t n = uxTaskGetNumberOfTasks();
+        TaskStatus_t *t = (TaskStatus_t *)heap_caps_malloc(n * sizeof(TaskStatus_t), MALLOC_CAP_SPIRAM);
+        String o;
+        if (t) {
+            n = uxTaskGetSystemState(t, n, NULL);
+            char b[96];
+            snprintf(b, sizeof(b), "intern frei %u, Tiefstwert %u, größter Block %u\n\n",
+                     heap_caps_get_free_size(MALLOC_CAP_INTERNAL), heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL),
+                     heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
+            o += b;
+            o += "Nr  Task             Stapel   nie benutzt (Bytes)\n";
+            for (UBaseType_t i = 0; i < n; i++) {
+                snprintf(b, sizeof(b), "%-3u %-16s %-8s %u\n", (unsigned)t[i].xTaskNumber, t[i].pcTaskName,
+                         esp_ptr_external_ram(t[i].pxStackBase) ? "PSRAM" : "intern",
+                         (unsigned)t[i].usStackHighWaterMark);
+                o += b;
+            }
+            heap_caps_free(t);
+        }
+        server.send(200, "text/plain; charset=utf-8", o);
+    });
     server.on("/log.txt", HTTP_GET, []() {
         String o;
         log_text(o);
@@ -709,15 +733,17 @@ void web_begin()
         }
         server.send(200, "application/json", "{}");
     });
+    server.on("/vrm.txt", HTTP_GET, []() {
+        String o;
+        vrm_letzte_zeile(o);
+        server.send(200, "text/plain; charset=utf-8", o.length() ? o : String("noch keine Zeile"));
+    });
     server.on("/api/vrm", HTTP_GET, []() {
         if (server.hasArg("test")) {
             vrm_test_post();
         }
-        if (server.hasArg("listen")) {
-            vrm_listen(server.arg("listen").toInt());
-        }
-        if (server.hasArg("stop")) {
-            vrm_stop();
+        if (server.hasArg("an")) {
+            vrm_senden(server.arg("an") == "1");
         }
         server.send(200, "application/json", "{}");
     });

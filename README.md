@@ -164,6 +164,27 @@ ioBroker soll nichts merken: gleiche Adresse 192.168.1.10:1883, Benutzer `remote
 - Schreiben: `AcPowerSetPoint`, `vebus.288.Mode`, `BatteryLife/State`.
 - `mqtt_pv_100` ist der Growatt MIC. Venus bindet ihn mit [venus-os_dbus-mqtt-pv](https://github.com/mr-manuel/venus-os_dbus-mqtt-pv) ein: höchstens 1600 W, AC-Eingang 1, Topic `Growatt_fake/power` am Broker 192.168.1.4. Kommt 60 s nichts, beendet sich der Treiber. Das Topic schreibt das ioBroker-Skript `script.js.common.Photovoltaik` (Adapter `javascript.0`), mit `power`, `current` und `energy_forward`. Das muss weiter ankommen.
 
+## Speicher (interner RAM)
+
+Der S3 hat rund 320 kB internen RAM und 8 MB PSRAM. Knapp ist der interne RAM: Stapel der Tasks, die die Bibliotheken selbst anlegen, und mbedtls liegen dort. Werte von ESP_venus, gemessen am 19.11.2026 (Webseite: `/tasks.txt`, Reiter VRM):
+
+| Stand | intern frei | Tiefstwert |
+|---|---|---|
+| Firmware vom 17.11. ohne VRM, nach 3,7 h | 102 kB | 98 kB |
+| VRM, erste Fassung | 43 kB | 29 kB |
+| VRM, mbedtls und eigene Stapel im PSRAM, Stapel und Puffer verkleinert | 73 kB | 63 kB |
+
+VRM kostet damit rund 28 kB intern. Davon:
+- Quelle (MQTT zum Pi, nur im Übergang): Stapel 5 kB (3,1 kB benutzt), Puffer 2 × 1 kB.
+- Brücke (MQTT zu VRM): Stapel 5,5 kB (2,8 kB benutzt, TLS-Aufbau eingeschlossen), Puffer 2 × 1 kB.
+
+Was geändert ist:
+- **mbedtls:** Arduino stellt es auf internen RAM (`CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC`). Zwei TLS-Verbindungen scheiterten daran mit `-0x7F00` (Speicher). Die Firmware setzt beim Start `mbedtls_platform_set_calloc_free` auf PSRAM.
+- **Eigene Tasks `vrm` und `vrm_live`:** Stapel im PSRAM (`xTaskCreatePinnedToCoreWithCaps`). Das geht nur für Tasks, die nicht in den Flash schreiben.
+- **Stapel von esp-mqtt:** Die legt die Bibliothek selbst intern an, PSRAM lässt sie nicht zu. Deshalb auf das Gemessene verkleinert.
+
+Nicht gemacht: alle kleinen Speicheranforderungen der Firmware in den PSRAM umleiten (`heap_caps_malloc_extmem_enable`). Das träfe auch VE.Bus, USB und CAN, es müsste erst geprüft werden.
+
 ## VE.Bus laut Quellen (nicht von mir gemessen)
 
 - 256000 Baud, 8N1. Sync-Frame alle 20 ms.

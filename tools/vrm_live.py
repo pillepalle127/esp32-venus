@@ -120,6 +120,7 @@ def main():
                                       "zusätzlich alle 30 s veröffentlichen")
     ap.add_argument("--mqtt311", action="store_true",
                     help="MQTT 3.1.1 statt 5 (Test, ob esp-mqtt in der Firmware reicht)")
+    ap.add_argument("--ohne-bridge", action="store_true", help="Test: ohne Bridge-Bit anmelden")
     ap.add_argument("--dauer", type=int, default=600, help="Sekunden, dann trennen (Standard 600)")
     args = ap.parse_args()
 
@@ -185,7 +186,8 @@ def main():
     proto = mqtt.MQTTv311 if args.mqtt311 else mqtt.MQTTv5
     c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=cid, protocol=proto,
                     **({"clean_session": True} if args.mqtt311 else {}))
-    c.enable_bridge_mode()      # bridge_protocol_bit true wie in vrm_bridge.conf
+    if not args.ohne_bridge:
+        c.enable_bridge_mode()  # bridge_protocol_bit true wie in vrm_bridge.conf
     c.username_pw_set("ccgxapikey_" + pid, sec["mqtt_password"])
     c.tls_set(ca_certs=R.CA)
     zustand = {"verbunden": False, "keepalive": 0, "gesendet": 0, "echo": 0}
@@ -196,7 +198,7 @@ def main():
         cl.publish(f"N/{pid}/system/0/Serial", json.dumps({"value": pid}), retain=True)
 
     def on_connect(cl, ud, flags, rc, props=None):
-        log(f"verbunden mit {host}:443 als {cid}, MQTT {'3.1.1' if args.mqtt311 else '5'}, Ergebnis {rc}")
+        log(f"verbunden mit {host}:443 als {cid}, MQTT {'3.1.1' if args.mqtt311 else '5'}, Bridge-Bit {'aus' if args.ohne_bridge else 'an'}, Ergebnis {rc}")
         if rc == 0:
             zustand["verbunden"] = True
             # N mit abonnieren: Kommt das Eigene zurück, nimmt der Broker die Themen an

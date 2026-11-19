@@ -71,7 +71,7 @@ ESP_venus nimmt Portal-ID, Token und Passwort des Pi. Sie stehen in `firmware/sr
 | Schritt | Was | Der Pi |
 |---|---|---|
 | V1 Verbindung | ESP_venus schickt einen TEST_POST (`c=6`) an `log.php` und erwartet `vrm: OK`. Dazu baut er die TLS-Verbindung zu `mqtt54` auf, meldet sich an und abonniert `R/<ID>/#`, veröffentlicht aber nichts. | sendet weiter wie bisher |
-| V2 Werte vorbereiten | Codes aus `datalist.py` für MultiPlus, Batterie, MPPT, Netz und System den Werten in ESP_venus zuordnen. Die Zeilen nur ins Log schreiben und neben das vergleichen, was der Pi sendet. | sendet weiter |
+| V2 Werte vorbereiten | Firmware sendet wie der vrmlogger und die Brücke, aber an die Test-Installation ESP_sim. Werte im Übergang vom Broker des Pi, nur lesend. Täglich über die API neben das legen, was der Pi sendet. | sendet weiter |
 | V3 Umschalten | vrmlogger und Brücke auf dem Pi aus, ESP_venus sendet ANNOUNCE, Werte, kWh und Live-Werte. Zusammen mit dem Umschalten für ioBroker. | sendet nicht mehr |
 - Welche Codes ESP_venus senden muss: Auszug aus `datalist.py` für MultiPlus, Batterie, MPPT, Netz und System.
 - Die Live-Werte nutzen dieselben Themen `N/<ID>/…` wie der MQTT-Broker für ioBroker (README, Abschnitt MQTT). Beides sollte aus einer Quelle kommen.
@@ -185,7 +185,7 @@ Das Dashboard von ESP_sim zeigt „Echtzeit“ und die MQTT-Werte. Nötig waren,
 
 1. **`view_permissions.twoway`** der Installation (VRM-API `installations?extended=1`). Ohne diese Freigabe verbindet sich die Seite gar nicht für Live-Werte. VRM setzt sie erst, wenn ANNOUNCE Bit 10 in `cp` meldet („Uses new vrm config data attributes, part of 2024 security project“) und der Portal-Modus `vrm=2` gemeldet ist. Gegenprobe: `cp=256` → false, `cp=1280` → true. ESP_venus meldet `cp = 1280` (Bit 8 und 10).
 2. **Nach jedem ANNOUNCE** gleich PRIORITY_CONFIGCHANGE (`vrm=2`) und CONFIGCHANGE schicken, wie der vrmlogger. Sonst vergisst VRM `vrm`, `sl`, `tz` usw.
-3. **MQTT-Brücke** wie flashmq in Venus v3.75: MQTT 5, Bridge-Bit, Client-ID `GXdbus_…`, Benutzer `ccgxapikey_<id>`, Passwort über `storemqttpassword.php`. Ob alle drei nötig sind, ist nicht einzeln geprüft.
+3. **MQTT-Brücke** wie flashmq in Venus v3.75: Client-ID `GXdbus_…`, Benutzer `ccgxapikey_<id>`, Passwort über `storemqttpassword.php`. MQTT 5 und Bridge-Bit sind nicht nötig (siehe unten).
 4. **Was die Seite erwartet:** Sie schickt alle 30 s `R/<id>/system/0/Serial` mit `suppress-republish` als Keepalive und fragt `R/<id>/system/0/Connected`. „Echtzeit“ zeigt sie, solange nicht gespeicherte (retain 0) `N/<id>/…`-Nachrichten kommen. ESP_venus schickt `system/0/Connected = 1`, `heartbeat` (Unixzeit) alle 3 s und `system/0/Serial` mit Retain, wie der Pi.
 
 Bis 12:00 offen: Das Dashboard blieb bis auf Verbrauch, Solar und Batterie leer; beim Pi zeigt es die Topologie mit allen Einzelwerten. Auch 4896 gespiegelte Venus-Themen des Pi und die Aufbau-Codes (`si1`, `shao`, `shai`, `st`, `AIS`, `vi0` …) haben daran nichts geändert. VRM führt ESP_sim noch mit `hasMains = 0` (Pi: 1).
@@ -193,3 +193,27 @@ Bis 12:00 offen: Das Dashboard blieb bis auf Verbrauch, Solar und Batterie leer;
 19.11.2026, gegen 12:01: Das Dashboard von ESP_sim zeigt die Topologie mit den Einzelwerten (Nutzer), VRM führt ESP_sim jetzt mit `hasMains = 1`. Davor: um 11:58 die Aufbau-Codes (`si1`, `si2`, `shao`, `shai`, `shd`, `sb`, `st`, `H4M`, `bol`, `rwgm` als CONFIGCHANGE, `abs`, `AIS`, `AIT`, `ini`, `ic0`, `id0`, `vi0`, `ist0`, `is0` mit SENDDATA), um 12:01 ein Neustart des Live-Skripts mit ANNOUNCE, Konfiguration und SENDDATA samt dieser Codes. Welcher Teil den Ausschlag gab und ob VRM nur Zeit brauchte, ist nicht getrennt geprüft. ESP_venus schickt alles davon.
 
 19.11.2026, 12:05: Live-Ansicht mit MQTT 3.1.1 und Bridge-Bit (`tools/vrm_live.py --mqtt311`): „Echtzeit“ und Topologie wie mit MQTT 5 (Nutzer). esp-mqtt in der Firmware (nur 3.1.1) reicht also.
+
+19.11.2026, ab 12:09: MQTT 3.1.1 ohne Bridge-Bit (`--mqtt311 --ohne-bridge`): ebenfalls „Echtzeit“ (Nutzer). Das Bridge-Bit ist also nicht nötig, esp-mqtt bleibt unverändert.
+
+## Firmware V2 (19.11.2026)
+
+Ziel ist ESP_sim: `firmware/src/vrm_secrets.h` hat die Zugangsdaten aus `tools/vrm_test.json`, die des Pi liegen in `vrm_secrets_pi.h` (beide nicht im Repo).
+
+- **Tabelle** `firmware/src/vrm_tabelle.h`, erzeugt von `tools/vrm_tabelle.py` aus `datalist.py` und der Themenliste des Pi vom 19.11.2026: jeder Code, den der vrmlogger für die zehn Geräte und das System sendet und den der Pi hat. 471 Themen: 375 mit jeder SENDDATA-Zeile, 22 nur nach Änderung, 64 als Konfiguration, 10 nur für kWh und Live-Ansicht. Ausgelassen: `…/Devices/0/VregLink` (8×), dafür fragt Venus den D-Bus ab. Firmware-Versionen gehen als fester Text, über MQTT kommt nur die Zahl, den Text bildet jeder Treiber selbst (`v4.19`, `v19.9`, `508`).
+- **Quelle** (`vrm_quelle.cpp`): abonniert die 471 Themen unter `N/<ID des Pi>/` auf `192.168.1.10:1883`. Sendet dort nichts, auch kein Keepalive. Anmeldung als `remoteconsole` wie ioBroker (`mqtt.1`); ohne Benutzer antwortet der Broker „Not authorized“ (19.11.2026). Laut meinen Notizen zur Kellerlüftung (26.10.2026) schickt Venus laufend alle Werte, auch unveränderte, höchstens 13 s alt; Mithören reicht also.
+- **Logger** (`vrm.cpp`): 60 s nach dem Verbinden mit der Quelle ANNOUNCE, `vrm=2`, CONFIGCHANGE, erste SENDDATA. Danach alle 300 s SENDDATA mit den laufenden kWh, zu jeder Viertelstunde HOURLYDELTAS. Geänderte Konfiguration nach 5 s als CONFIGCHANGE. Ist die Quelle getrennt, fällt die SENDDATA-Zeile aus. Gesendet wird gebündelt an `logbulk.php`, zlib mit ungepackten Blöcken (vom Server angenommen, Probe 19.11.2026). Was nicht ankommt, bleibt in der Warteschlange, bis 1,5 MB im PSRAM, ohne Speichern über einen Neustart.
+- **Rundung** wie `monitor.py`: nur bei 1 oder mehr Nachkommastellen, Werte mit 0 Stellen gehen ungerundet raus.
+- **kWh** wie `kwhdeltas.py`, aus den Zählern: `vebus/288/Energy/*`, `solarcharger/*/Yield/User`, `grid/40/Ac/Energy/*`, `pvinverter/*/Ac/Energy/Forward`, Zähler der aktiven Batterie, `system/0/Timers/*`. Ohne DC-System, beide AC-Eingänge zählen als Netz (`si2 = 0`).
+- **Brücke**: MQTT 3.1.1 zu `mqtt<n>.victronenergy.com:443`, Client-ID `GXdbus_…`, Passwort beim Start über `storemqttpassword.php` angemeldet. `heartbeat` alle 3 s; geänderte Werte nur, solange die VRM-Seite fragt (letzte Anfrage unter 70 s); nach `R/<ID>/keepalive` ohne `suppress-republish` alles und `full_publish_completed`. Leseanfragen beantwortet sie aus der Tabelle, Schreibwünsche schreibt sie nur ins Log.
+- **Webseite**, Reiter VRM: Zustand, Quelle, Warteschlange, letzte Antwort, Brücke, „senden an/aus“ (bis zum Neustart), Verbindungstest. `/vrm.txt` zeigt die letzte SENDDATA-Zeile, ein Wert je Zeile, ohne Token.
+
+Anders als Venus: Venus schickt bei Änderung eines Werts mit `onIntervalAlwaysAndOnEvent` sofort eine weitere SENDDATA-Zeile. ESP_venus schickt nur alle 300 s.
+
+### Erster Lauf auf ESP_venus (19.11.2026)
+
+- 14:22: Quelle verbunden (Anmeldung als `remoteconsole`), 367 von 471 Themen mit Wert.
+- Zuerst scheiterten Logger und Brücke mit `mbedtls_ssl_setup returned -0x7F00` (`MBEDTLS_ERR_SSL_ALLOC_FAILED`): Arduino stellt mbedtls auf internen RAM (`CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC`), frei waren rund 50 kB. Seit `mbedtls_platform_set_calloc_free` größere Stücke aus dem PSRAM holt, geht es; interner RAM danach mindestens 29 kB frei.
+- 14:31: ANNOUNCE, Konfiguration und erste SENDDATA (299 Werte) angenommen („vrm: OK“), Passwort angemeldet (HTTP 200), Brücke verbunden.
+- Dashboard von ESP_sim: „Echtzeit“, Werte bewegen sich (Nutzer).
+- Offen: Vergleich ESP_sim mit dem Pi über die API nach einem vollen Tag (Schritt 6); warum 104 Themen ohne Wert bleiben.

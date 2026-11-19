@@ -26,6 +26,7 @@
 #include "radio.h"
 #include "sc16.h"
 #include "sysinfo.h"
+#include "vrm.h"
 
 // Zugangsdaten stehen nicht im Code: wifi_secrets.h.example kopieren und anpassen.
 #if __has_include("wifi_secrets.h")
@@ -576,6 +577,7 @@ static void start_task(void *)
     configTzTime("CET-1CEST,M3.5.0,M10.5.0/3", "192.168.1.1", "pool.ntp.org");   // NTP wie in den OpenDTUs
 
     xTaskCreatePinnedToCore(net_task, "net", 8192, NULL, 1, &task_net, CORE_OTHER);
+    vrm_begin();
     vTaskDelete(NULL);
 }
 

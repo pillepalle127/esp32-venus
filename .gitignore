@@ -10,6 +10,6 @@ firmware/src/wifi_secrets.h
 firmware/src/inverters.h
 firmware/elf/
 *.kicad_prl
-firmware/src/vrm_secrets.h
+firmware/src/vrm_secrets*.h
 tools/vrm_test.json
 tools/vrm_api_token.txt

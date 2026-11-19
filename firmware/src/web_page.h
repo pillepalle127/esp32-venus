@@ -151,14 +151,12 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
 </section>
 
 <section id="s-vrm">
- <div class="card"><h2>VRM: Verbindung prüfen (V1)</h2><table id="vrm"></table>
-  <p><button class="btn" onclick="api('vrm?test=1').then(t)">Verbindungstest</button>
-   MQTT <input id="vrms" size="4" type="number" min="10" max="300" value="60"> s
-   <button class="btn" onclick="api('vrm?listen='+$('vrms').value).then(t)">mithören</button>
-   <button class="btn g" onclick="api('vrm?stop=1').then(t)">trennen</button></p>
-  <p class="dim">Verbindungstest: ein TEST_POST an VRM mit Portal-ID und Token des Pi, erwartet „vrm: OK“. MQTT: Anmeldung bei VRM, hört auf R/&lt;ID&gt;/#, sendet nichts, trennt nach der eingestellten Zeit von selbst. Der Pi sendet währenddessen weiter.</p>
-  <p class="note">Nur kurz mithören und auf dem Pi /Mqtt/Bridges/GXdbus/Connected prüfen: Ob VRM zwei Verbindungen mit demselben Benutzer zulässt, ist nicht bekannt.</p>
-  <h2>Empfangen</h2><div class="wrap"><table id="vrmlast" class="mono"></table></div></div>
+ <div class="card"><h2>VRM (V2)</h2><table id="vrm"></table>
+  <p><button class="btn" onclick="api('vrm?an=1').then(t)">senden an</button>
+   <button class="btn g" onclick="api('vrm?an=0').then(t)">senden aus</button>
+   <button class="btn g" onclick="api('vrm?test=1').then(t)">Verbindungstest</button>
+   <a class="btn g" href="/vrm.txt" target="_blank">letzte SENDDATA-Zeile</a></p>
+  <p class="dim">ESP_venus meldet an die Portal-ID aus vrm_secrets.h wie der vrmlogger: alle 300 s Werte, alle 15 min kWh. Live-Ansicht über MQTT; Schreibwünsche aus VRM werden nie ausgeführt. Werte kommen im Übergang vom Broker des Pi, nur lesend. „senden aus“ gilt bis zum Neustart.</p></div>
 </section>
 
 <section id="s-log">
@@ -219,12 +217,17 @@ function render(){const s=S;if(!s)return;const y=s.sys;
  r.push(['CH348',s.ch348.ok?'<span class="ok">verbunden</span> · '+s.ch348.ports.filter(p=>p.age>=0&&p.age<5000).length+' Ports mit Daten':'<span class="bad">nicht verbunden</span>']);
  r.push(['WLAN',y.ip?y.ssid+' · '+y.rssi+' dBm':'<span class="bad">getrennt</span>']);rows('home',r);
  });
- sec('VRM',()=>{const v=s.vrm;if(!v)return;
-  $('vrm').innerHTML=[['Zugangsdaten',v.secrets?'<span class="ok">vrm_secrets.h vorhanden</span>':'<span class="bad">src/vrm_secrets.h fehlt</span>'],
-   ['Verbindungstest',esc(v.post)+(v.post_at?' <span class="dim">(bei '+v.post_at+' s Laufzeit)</span>':'')],
-   ['MQTT',esc(v.mqtt)+(v.mqtt_busy?' <span class="dim">· trennt in '+v.left+' s</span>':'')],
-   ['Empfangen',v.msgs+' Nachrichten']].map(r=>'<tr><th>'+r[0]+'</th><td>'+r[1]+'</td></tr>').join('');
-  $('vrmlast').innerHTML=v.last.length?v.last.map(l=>'<tr><td>'+esc(l)+'</td></tr>').join(''):'<tr><td class="dim">noch nichts</td></tr>'});
+ sec('VRM',()=>{const v=s.vrm;if(!v)return;const q=v.quelle||{};const ag=x=>x<0?'noch nie':'vor '+x+' s';
+  $('vrm').innerHTML=(v.secrets?[['Zustand',(v.an?'':'<span class="bad">aus</span> · ')+esc(v.zustand||'')],
+   ['Quelle',esc(q.zustand||'')+' · '+esc(q.quelle||'')+' · '+q.mit_wert+' von '+q.themen+' Themen mit Wert · letzte Nachricht '+ag(q.alter_s)],
+   ['Warteschlange',v.schlange+' Zeilen, '+v.schlange_kb+' kB'+(v.verworfen?' · <span class="bad">'+v.verworfen+' verworfen</span>':'')],
+   ['Gesendet',v.zeilen+' Zeilen in '+v.posts+' POSTs · '+v.fehler+' Fehler · zuletzt angenommen '+ag(v.ok_s)],
+   ['Letzte Antwort',esc(v.antwort||'')],
+   ['SENDDATA / kWh',ag(v.senddata_s)+' / '+ag(v.kwh_s)],
+   ['Live-Brücke',esc(v.bruecke||'')+' · '+esc(v.broker||'')],
+   ['VRM-Seite','letzte Anfrage '+ag(v.seite_s)+' · '+v.r+' Leseanfragen, '+v.keepalive+' Keepalive, '+v.w+' Schreibwünsche (nicht ausgeführt) · '+v.publiziert+' Nachrichten gesendet'],
+   ['Verbindungstest',esc(v.post||'')]]:[['Zugangsdaten','<span class="bad">src/vrm_secrets.h fehlt</span>']])
+   .map(r=>'<tr><th>'+r[0]+'</th><td>'+r[1]+'</td></tr>').join('')});
  sec('Relais',()=>{
  $('relays').innerHTML=s.relay.map((x,i)=>'<tr><th>'+x.name+' (GPIO '+x.gpio+')</th><td>'+({frei:'nicht getrieben',low:'low',high:'high'}[x.mode])+'</td><td>'+
   ['frei','low','high'].map(m=>'<button class="btn'+(x.mode==m?'':' g')+'" onclick="api(\'relay?i='+i+'&m='+m+'\').then(t)">'+m+'</button>').join('')+'</td></tr>').join('');
