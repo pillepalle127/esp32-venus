@@ -106,7 +106,7 @@ Regeln:
 1. Die Regelung hängt nie am Netz. Fällt ioBroker, Broker oder DNS aus, laufen VE.Bus, DVCC und Zähler weiter. Netzwerkaufrufe blockieren nie, Adressen sind fest.
 2. Ist das BMS nicht frisch, gehen keine Vorgaben mehr an die MPPT. Sie stoppen dann mit Fehler #67, statt blind zu laden.
 3. Ist der Zähler nicht frisch (10 s wie in `victron_meter.be`), geht der Sollwert auf 0 W. Bleibt das so, geht der MultiPlus in Passthrough, wie heute.
-4. Der Sollwert ist immer begrenzt durch die Lade- und Entladegrenze des BMS und durch den Mindest-SOC.
+4. Der Sollwert ist immer begrenzt durch die Lade- und Entladegrenze des BMS und durch den Mindest-SOC. Der SoC kommt dabei vom SmartShunt, nicht vom JK-BMS (siehe README). Unter 0 °C an der Batterie ist Laden aus, solange der Heizer nicht aktiv ist.
 5. Watchdog auf allen Tasks. Vor jedem Neustart und Update schalte ich den Bus stumm (`setTxEnabled(false)`). DE und TX sind per Widerstand so vorgespannt, dass der Bus beim Hochfahren frei bleibt.
 6. Updates über WLAN mit zwei Partitionen. Besteht die neue Firmware ihre Selbstprüfung nicht, geht sie automatisch zurück.
 7. Parser und Regelung teste ich auf dem Rechner, mit echten Mitschnitten.

@@ -26,6 +26,10 @@ Ich will die Funktionen von Venus OS, die ich nutze, auf einem ESP32-S3 nachbaue
 | `pvinverter.mqtt_pv_100` | 100 | Growatt MIC, über `dbus-mqtt-pv` | MQTT |
 
 - DVCC ist aktiv.
+- Akku: zwei Packs parallel, je 15s1p aus Zellen Eve LF230, jedes Pack mit eigenem JK-BMS der PB-Reihe: JK-PB2A16S20P (8–16S, 200 A, 2 A aktiver Balancer). Primäres BMS V19, sekundäres V15.
+- Heizung: Das JK-BMS schaltet seinen Heizausgang selbst. Freigabe bei der PB-Reihe über RS485, Register `0x0114` Bit 0 (`HeatEN`, lesen und schreiben, im selben Register stehen weitere Schalter), dazu Start- und Stopptemperatur. Über CAN gibt es keinen Befehl dafür. Quelle: [jkbms-rs485-addon #177](https://github.com/jean-luc1203/jkbms-rs485-addon/issues/177), an meinen BMS nicht geprüft.
+- Unter 0 °C an der Batterie muss der Heizer aktiviert werden. Der Heizer ist noch nicht aktiv, deshalb muss unter 0 °C das Laden abgeschaltet werden.
+- Als SoC gilt immer der Wert des SmartShunt (battery 291). Der SoC des JK-BMS driftet viel stärker und hat einen hohen Messfehler.
 - Die seriellen Anschlüsse laufen heute über 2 × FT4232 am Pi, alle Kanäle mit Isolatoren.
 - Firmware der MPPT v1.74 (`372` = `0x174`), MultiPlus v508 (`1288` = `0x508`).
 - `can1`: 500 kbit/s, MCP2515 am Pi. Das schafft der TWAI des S3 auch.
