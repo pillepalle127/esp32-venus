@@ -6,7 +6,7 @@ Ich prüfe jede Strecke einzeln, bevor der S3 an die Anlage kommt. Werkzeug ist 
 - **Teil B** ist Phase 2 aus [PLAN.md](../PLAN.md): Der S3 hört an der Anlage mit und sendet nichts. Jeden Schritt in Teil B spreche ich vorher einzeln ab.
 - Die Ergebnisse trage ich unten in die Tabelle ein.
 
-## Anstehend (Stand 17.11.2026)
+## Anstehend (Stand 18.11.2026)
 
 Erledigt seit 15.11.: A6c, B4, B3 und der erste Test mit Senden am MultiPlus (C1, siehe Ergebnisse). Nach Wichtigkeit für das Ziel, Venus zu ersetzen:
 
@@ -23,9 +23,12 @@ Erledigt seit 15.11.: A6c, B4, B3 und der erste Test mit Senden am MultiPlus (C1
 | 9 | B5 VE.Direct, die übrigen MPPT und der SmartShunt, danach DVCC | Anlage | 8 |
 | 10 | Entscheidung SoC-Quelle für Regelung und Mindest-SoC: SmartShunt (wie heute Venus) oder BMS | – | 9 |
 | 11 | Werte an ioBroker über MQTT, wie heute von Tasmota und Venus. Bisher veröffentlicht ESP_venus nichts | – | Firmware |
-| 12 | B6 JK-BMS über RS485, Zellspannungen beider Packs | Anlage | Firmware: JK-Protokoll |
-| 13 | B7 Regelung WP-HMS, A9 Rest | Anlage | CMT2300A wird seit 16.11. nicht gefunden |
-| 14 | A10 Relais-Pins | Tisch | Relaistreiber aufgebaut |
+| 12 | V1 VRM-Verbindung: TEST_POST an `log.php`, Antwort `vrm: OK`. Anmeldung bei `mqtt54` mit Portal-ID und Passwort des Pi, `R/<ID>/#` abonnieren, nichts senden. Nur kurz, dabei auf dem Pi `/Mqtt/Bridges/GXdbus/Connected` prüfen. Ablauf in [vrm.md](vrm.md) | Tisch | Firmware |
+| 13 | V2 VRM-Zeilen: Codes aus `datalist.py` den Werten von ESP_venus zuordnen, Zeilen nur ins Log schreiben und mit dem vergleichen, was der Pi sendet | – | 12 |
+| 14 | V3 VRM umschalten: vrmlogger und Brücke auf dem Pi aus, ESP_venus sendet ANNOUNCE, Werte, kWh und Live-Werte | Anlage | 11, 13, Absprache |
+| 15 | B6 JK-BMS über RS485, Zellspannungen beider Packs | Anlage | Firmware: JK-Protokoll |
+| 16 | B7 Regelung WP-HMS, A9 Rest | Anlage | CMT2300A wird seit 16.11. nicht gefunden |
+| 17 | A10 Relais-Pins | Tisch | Relaistreiber aufgebaut |
 
 Zu lösen, bevor ESP_venus die MPPT übernimmt: Der CH348 meldet sich nach einem Neustart von ESP_venus erst nach Aus/Ein seiner eigenen 5 V wieder (A8).
 

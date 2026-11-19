@@ -17,6 +17,7 @@
 #include "sc16.h"
 #include "sysinfo.h"
 #include "util.h"
+#include "vrm.h"
 #include "web_page.h"
 
 static WebServer server(80);
@@ -197,7 +198,9 @@ static void handle_status()
                  relays[i].name, relays[i].mode < 0 ? "frei" : relays[i].mode ? "high" : "low");
         o += b;
     }
-    o += "]}";
+    o += "],\"vrm\":";
+    vrm_json(o);
+    o += "}";
     server.send(200, "application/json", o);
 }
 
@@ -703,6 +706,18 @@ void web_begin()
         }
         if (server.hasArg("pa")) {
             radio.set_pa((int8_t)server.arg("pa").toInt());
+        }
+        server.send(200, "application/json", "{}");
+    });
+    server.on("/api/vrm", HTTP_GET, []() {
+        if (server.hasArg("test")) {
+            vrm_test_post();
+        }
+        if (server.hasArg("listen")) {
+            vrm_listen(server.arg("listen").toInt());
+        }
+        if (server.hasArg("stop")) {
+            vrm_stop();
         }
         server.send(200, "application/json", "{}");
     });

@@ -150,6 +150,17 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
   <p class="dim">Seriennummer mit 12 Stellen vom Typenschild, nur damit kann ESP_venus abfragen. Mit der Kennung (8 Stellen aus dem Funk) lässt sich ein Gerät nur benennen, etwa eine fremde DTU oder ein fremder Wechselrichter. Neue Geräte sind aus.</p></div>
 </section>
 
+<section id="s-vrm">
+ <div class="card"><h2>VRM: Verbindung prüfen (V1)</h2><table id="vrm"></table>
+  <p><button class="btn" onclick="api('vrm?test=1').then(t)">Verbindungstest</button>
+   MQTT <input id="vrms" size="4" type="number" min="10" max="300" value="60"> s
+   <button class="btn" onclick="api('vrm?listen='+$('vrms').value).then(t)">mithören</button>
+   <button class="btn g" onclick="api('vrm?stop=1').then(t)">trennen</button></p>
+  <p class="dim">Verbindungstest: ein TEST_POST an VRM mit Portal-ID und Token des Pi, erwartet „vrm: OK“. MQTT: Anmeldung bei VRM, hört auf R/&lt;ID&gt;/#, sendet nichts, trennt nach der eingestellten Zeit von selbst. Der Pi sendet währenddessen weiter.</p>
+  <p class="note">Nur kurz mithören und auf dem Pi /Mqtt/Bridges/GXdbus/Connected prüfen: Ob VRM zwei Verbindungen mit demselben Benutzer zulässt, ist nicht bekannt.</p>
+  <h2>Empfangen</h2><div class="wrap"><table id="vrmlast" class="mono"></table></div></div>
+</section>
+
 <section id="s-log">
  <div class="card"><h2>Konsole <a class="btn g" href="/log.txt" target="_blank">als Text</a></h2><pre id="log"></pre>
   <p class="dim">Das Log übersteht Neustart, Absturz und Watchdog, nach Stromausfall ist es leer. Zeitstempel mit Datum, vor dem Stellen der Uhr Laufzeit seit dem Start (+hh:mm:ss).</p></div>
@@ -165,7 +176,7 @@ pre{background:#0d0f11;border:1px solid var(--line);border-radius:6px;padding:8p
 </section>
 </main>
 <script>
-const tabs=[['home','Übersicht'],['i2c','I²C'],['mt','Zähler'],['can','CAN'],['left','VE.Bus / RS485'],['ess','ESS MultiPlus'],['ved','VE.Direct'],['packs','RS485 Packs'],['radio','Funk'],['dtu','DTU'],['log','Konsole'],['sys','System']];
+const tabs=[['home','Übersicht'],['i2c','I²C'],['mt','Zähler'],['can','CAN'],['left','VE.Bus / RS485'],['ess','ESS MultiPlus'],['ved','VE.Direct'],['packs','RS485 Packs'],['radio','Funk'],['dtu','DTU'],['vrm','VRM'],['log','Konsole'],['sys','System']];
 const $=id=>document.getElementById(id);
 let cur='home',S=null,logFrom=0;
 function essSave(){api('ess?mode='+$('emode').value+'&target='+$('etarget').value+'&fixed='+$('efixed').value+'&soc_min='+$('esoc').value+'&max_dis='+$('edis').value+'&max_ch='+$('ech').value).then(t)}
@@ -208,6 +219,12 @@ function render(){const s=S;if(!s)return;const y=s.sys;
  r.push(['CH348',s.ch348.ok?'<span class="ok">verbunden</span> · '+s.ch348.ports.filter(p=>p.age>=0&&p.age<5000).length+' Ports mit Daten':'<span class="bad">nicht verbunden</span>']);
  r.push(['WLAN',y.ip?y.ssid+' · '+y.rssi+' dBm':'<span class="bad">getrennt</span>']);rows('home',r);
  });
+ sec('VRM',()=>{const v=s.vrm;if(!v)return;
+  $('vrm').innerHTML=[['Zugangsdaten',v.secrets?'<span class="ok">vrm_secrets.h vorhanden</span>':'<span class="bad">src/vrm_secrets.h fehlt</span>'],
+   ['Verbindungstest',esc(v.post)+(v.post_at?' <span class="dim">(bei '+v.post_at+' s Laufzeit)</span>':'')],
+   ['MQTT',esc(v.mqtt)+(v.mqtt_busy?' <span class="dim">· trennt in '+v.left+' s</span>':'')],
+   ['Empfangen',v.msgs+' Nachrichten']].map(r=>'<tr><th>'+r[0]+'</th><td>'+r[1]+'</td></tr>').join('');
+  $('vrmlast').innerHTML=v.last.length?v.last.map(l=>'<tr><td>'+esc(l)+'</td></tr>').join(''):'<tr><td class="dim">noch nichts</td></tr>'});
  sec('Relais',()=>{
  $('relays').innerHTML=s.relay.map((x,i)=>'<tr><th>'+x.name+' (GPIO '+x.gpio+')</th><td>'+({frei:'nicht getrieben',low:'low',high:'high'}[x.mode])+'</td><td>'+
   ['frei','low','high'].map(m=>'<button class="btn'+(x.mode==m?'':' g')+'" onclick="api(\'relay?i='+i+'&m='+m+'\').then(t)">'+m+'</button>').join('')+'</td></tr>').join('');

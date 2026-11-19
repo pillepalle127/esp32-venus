@@ -38,7 +38,7 @@ Gesamtplan: [PLAN.md](PLAN.md). Testplan mit Ergebnissen: [docs/testplan.md](doc
 - Ein ESP32-S3 für alles.
 - Die FT4232 ersetze ich durch einen CH348. Der läuft allerdings nicht an Venus.
 - Von OpenDTU-OnBattery nutze ich nur Überwachung und Steuerung des Hoymiles HMS zur Einspeisung. Es ist deshalb keine Basis für dieses Projekt.
-- VRM fällt weg. Der VRM-Prognosevergleich endet dann vermutlich mit dem Umschalten.
+- Die Verbindung zu VRM bleibt (Entscheidung vom 18.11.2026). ESP_venus meldet selbst an VRM, so wie der vrmlogger in Venus OS. Was Venus heute sendet: [docs/vrm.md](docs/vrm.md).
 
 ## Serielle Anschlüsse
 
