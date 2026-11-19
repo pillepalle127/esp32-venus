@@ -831,7 +831,7 @@ for s_, i in zip(['GND', '3V3', 'BUSY', 'RST', 'DC', 'CS', 'MOSI', 'SCK'], range
 board_text('X8 USB-C CH348', 98.9, 93.0, 0.7, angle=90)
 board_text('frei fuer COM-Stecker', 91.2, 73.0, 0.8, pcbnew.Dwgs_User)
 board_rect(84.5, 57.8, 98.0, 80.0, pcbnew.Dwgs_User)
-for i_, t_ in enumerate(('ESP_venus v1', 'Ruehle', 'pillepalle127', '2026')):
+for i_, t_ in enumerate(('ESP_venus v1', 'Ruehle', 'sr-energy', '2026')):
     board_text(t_, 91.25, 59.6 + i_ * 1.6, 1.0)
 # Regler und Loetbruecke: was welche Stellung bedeutet
 board_text('U13 LM1117 optional', 50.0, 76.4, 0.7)

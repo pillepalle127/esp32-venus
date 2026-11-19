@@ -3,7 +3,7 @@
   (generator eeschema)
   (uuid 54aa183a-6bf3-4a82-ab76-2826b3ee0934)
   (paper "A3")
-  (title_block (title "ESP_venus v1, Platine klein, USB frei") (date "2026-11-17") (rev "1") (company "Ruehle  pillepalle127") (comment 1 "Erzeugt mit gen_kicad_sch.py aus esp_venus_klein_usbfrei.kicad_pcb"))
+  (title_block (title "ESP_venus v1, Platine klein, USB frei") (date "2026-11-17") (rev "1") (company "Ruehle  sr-energy") (comment 1 "Erzeugt mit gen_kicad_sch.py aus esp_venus_klein_usbfrei.kicad_pcb"))
   (lib_symbols
     (symbol "esp_venus:R"
       (pin_numbers hide)

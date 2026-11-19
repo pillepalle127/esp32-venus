@@ -637,7 +637,7 @@ usb(200.66, 213.36)
 lib_syms = ['lib_symbols'] + list(LIBSYMS.values())
 out = ['kicad_sch', ['version', '20230121'], ['generator', 'eeschema'], ['uuid', ROOT], ['paper', '"A3"'],
        ['title_block', ['title', '"ESP_venus v1, Platine klein, USB frei"'], ['date', '"2026-11-17"'],
-        ['rev', '"1"'], ['company', '"Ruehle  pillepalle127"'],
+        ['rev', '"1"'], ['company', '"Ruehle  sr-energy"'],
         ['comment', '1', '"Erzeugt mit gen_kicad_sch.py aus esp_venus_klein_usbfrei.kicad_pcb"']],
        lib_syms]
 out += ITEMS

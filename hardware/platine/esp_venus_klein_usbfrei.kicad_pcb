@@ -4103,7 +4103,7 @@
   (gr_text "X10 E-Paper" (at 67.945 36) (layer "F.SilkS") (tstamp f336d1fe-b9ab-47d2-83e0-1d833e115c26)
     (effects (font (size 0.7 0.7) (thickness 0.105)))
   )
-  (gr_text "pillepalle127" (at 91.25 62.8) (layer "F.SilkS") (tstamp f366f198-168f-43d2-a9cf-4918b0a25d11)
+  (gr_text "sr-energy" (at 91.25 62.8) (layer "F.SilkS") (tstamp f366f198-168f-43d2-a9cf-4918b0a25d11)
     (effects (font (size 1 1) (thickness 0.15)))
   )
   (gr_text "X12 Pack 2" (at 2.54 28.28) (layer "F.SilkS") (tstamp fa7ba206-f611-45f2-a6b1-fe7262943de1)

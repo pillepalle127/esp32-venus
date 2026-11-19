@@ -44,7 +44,7 @@ Blockdiagramm mit Funktionszuordnung: [platine_block.drawio](platine_block.drawi
 - **Jede Kette:** RS485-Modul bzw. TJA1050, ADuM1201, darunter B0505S mit Cin, Cout und Lastwiderstand.
 - **Mitte:** SC16IS752, darunter CMT2300A und X10. Darunter X2, X3, X4 nebeneinander, U13 mit C11, C12 und JP1, dann X1, X6, X7 senkrecht.
 - **Rechts:** das S3-Board, die Antenne ragt über die Oberkante. Unter der nativen USB-Buchse sitzen die Relaistreiber und der 5-V-Schalter für X8.
-- **Vor der COM-Buchse:** ein freier Streifen, x = 84,5 bis 98 mm, y = 57,8 bis 80 mm, auf der Platine gestrichelt markiert. Dort steht nur die Beschriftung „ESP_venus v1“, „Ruehle“, „pillepalle127“, „2026“. Dahinter läuft das Kabel, dort sitzt H4.
+- **Vor der COM-Buchse:** ein freier Streifen, x = 84,5 bis 98 mm, y = 57,8 bis 80 mm, auf der Platine gestrichelt markiert. Dort steht nur die Beschriftung „ESP_venus v1“, „Ruehle“, „sr-energy“, „2026“. Dahinter läuft das Kabel, dort sitzt H4.
 - **Unterkante:** W5500 mit RJ45 nach unten, X8 unten rechts mit der Buchse nach unten. Beide RJ45 und X8 zeigen nach unten, der rechte Rand ist frei von Steckern.
 - **Befestigung:** 4 Löcher M3. H1, H2, H3 am linken Rand zwischen den Ketten, H4 am Ende des freien Streifens. Kein Loch liegt unter einem Modul.
 
